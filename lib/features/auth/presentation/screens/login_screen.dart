@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,12 +52,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context.go('/');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('=== LOGIN ERROR ===');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Error: $e');
+      debugPrint('Stack: $stackTrace');
+      developer.log('Login failed', error: e, stackTrace: stackTrace, name: 'Auth');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Błąd logowania: ${_getErrorMessage(e)}'),
             backgroundColor: AppColors.lightDestructive,
+            duration: const Duration(seconds: 6),
           ),
         );
       }
@@ -65,13 +73,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   String _getErrorMessage(dynamic error) {
-    final msg = error.toString().toLowerCase();
-    if (msg.contains('invalid login credentials') ||
-        msg.contains('invalid_credentials')) {
+    final msg = error.toString();
+    final msgLower = msg.toLowerCase();
+    if (msgLower.contains('invalid login credentials') ||
+        msgLower.contains('invalid_credentials')) {
       return 'Nieprawidłowy email lub hasło';
     }
-    if (msg.contains('email not confirmed')) {
+    if (msgLower.contains('email not confirmed')) {
       return 'Potwierdź email przed logowaniem';
+    }
+    if (msgLower.contains('socketexception') || msgLower.contains('connection refused')) {
+      return 'Brak połączenia z serwerem. Sprawdź internet.';
+    }
+    // In debug mode show full error
+    if (kDebugMode) {
+      return msg.length > 200 ? msg.substring(0, 200) : msg;
     }
     return 'Spróbuj ponownie później';
   }

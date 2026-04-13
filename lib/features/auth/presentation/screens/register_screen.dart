@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,12 +46,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         context.go('/profile-setup');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('=== REGISTER ERROR ===');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Error: $e');
+      debugPrint('Stack: $stackTrace');
+      developer.log('Register failed', error: e, stackTrace: stackTrace, name: 'Auth');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Błąd rejestracji: ${_getErrorMessage(e)}'),
             backgroundColor: AppColors.lightDestructive,
+            duration: const Duration(seconds: 6),
           ),
         );
       }
@@ -59,12 +67,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   String _getErrorMessage(dynamic error) {
-    final msg = error.toString().toLowerCase();
-    if (msg.contains('already registered') || msg.contains('already exists')) {
+    final msg = error.toString();
+    final msgLower = msg.toLowerCase();
+    if (msgLower.contains('already registered') || msgLower.contains('already exists')) {
       return 'Ten email jest już zarejestrowany';
     }
-    if (msg.contains('weak password')) {
+    if (msgLower.contains('weak password')) {
       return 'Hasło jest za słabe';
+    }
+    if (msgLower.contains('email_address_invalid') || msgLower.contains('invalid email')) {
+      return 'Nieprawidłowy adres email';
+    }
+    if (msgLower.contains('signup_disabled')) {
+      return 'Rejestracja jest wyłączona w Supabase';
+    }
+    if (msgLower.contains('socketexception') || msgLower.contains('connection refused')) {
+      return 'Brak połączenia z serwerem. Sprawdź internet.';
+    }
+    // In debug mode, show the full error for diagnosis
+    if (kDebugMode) {
+      return msg.length > 200 ? msg.substring(0, 200) : msg;
     }
     return 'Spróbuj ponownie później';
   }
