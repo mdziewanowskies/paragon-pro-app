@@ -107,19 +107,32 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
 
         if (aiResponse.data != null) {
           final raw = aiResponse.data;
-          final aiData = raw is Map<String, dynamic>
-              ? raw
-              : (raw is Map ? Map<String, dynamic>.from(raw) : null);
+          Map<String, dynamic>? aiData;
+
+          // Edge Function returns {success: true, data: {...actual fields...}}
+          if (raw is Map<String, dynamic>) {
+            if (raw.containsKey('data') && raw['data'] is Map) {
+              aiData = Map<String, dynamic>.from(raw['data'] as Map);
+            } else {
+              aiData = raw;
+            }
+          } else if (raw is Map) {
+            aiData = Map<String, dynamic>.from(raw);
+          }
+
+          debugPrint('=== Parsed AI Data ===');
+          debugPrint('aiData: $aiData');
 
           if (aiData != null) {
             // Try both camelCase and snake_case keys from Edge Function
+            final amount = aiData['amount'];
             receiptData.addAll({
               'merchant_name': aiData['merchantName'] ?? aiData['merchant_name'],
               'merchant_address': aiData['merchantAddress'] ?? aiData['merchant_address'],
-              'amount': aiData['amount'] != null
-                  ? (aiData['amount'] is String
-                      ? double.tryParse(aiData['amount'])
-                      : (aiData['amount'] as num?)?.toDouble())
+              'amount': amount != null
+                  ? (amount is String
+                      ? double.tryParse(amount)
+                      : (amount is num ? amount.toDouble() : null))
                   : null,
               'purchase_date': aiData['purchaseDate'] ?? aiData['purchase_date'],
               'category': aiData['category'],

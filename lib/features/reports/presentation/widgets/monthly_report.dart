@@ -34,7 +34,7 @@ final monthlyReportProvider =
       0, (sum, r) => sum + (r.amount ?? 0));
   final lastTotal = lastMonthReceipts.fold<double>(
       0, (sum, r) => sum + (r.amount ?? 0));
-  final change = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal * 100) : 0;
+  final change = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal * 100) : 0.0;
 
   // Category breakdown
   final Map<String, double> categories = {};
@@ -65,7 +65,7 @@ class MonthlyReport extends ConsumerWidget {
       data: (data) {
         if (data.isEmpty) return const SizedBox.shrink();
 
-        final change = data['change'] as double? ?? 0;
+        final change = (data['change'] as num?)?.toDouble() ?? 0.0;
         final isUp = change > 0;
         final categories =
             data['categories'] as Map<String, double>? ?? {};
@@ -88,14 +88,14 @@ class MonthlyReport extends ConsumerWidget {
                       child: _ReportStat(
                         label: 'Ten miesiąc',
                         value: Formatters.formatCurrency(
-                            data['thisMonthTotal'] as double? ?? 0),
+                            (data['thisMonthTotal'] as num?)?.toDouble() ?? 0),
                       ),
                     ),
                     Expanded(
                       child: _ReportStat(
                         label: 'Poprzedni miesiąc',
                         value: Formatters.formatCurrency(
-                            data['lastMonthTotal'] as double? ?? 0),
+                            (data['lastMonthTotal'] as num?)?.toDouble() ?? 0),
                       ),
                     ),
                     Expanded(
