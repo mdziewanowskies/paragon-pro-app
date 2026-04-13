@@ -150,104 +150,115 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Search
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Szukaj po nazwie sklepu lub produkcie...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _loadReceipts();
-                      },
-                    )
-                  : null,
+    return RefreshIndicator(
+      onRefresh: () async => _loadReceipts(),
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Search
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Szukaj po nazwie sklepu lub produkcie...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _loadReceipts();
+                          },
+                        )
+                      : null,
+                ),
+                onSubmitted: (_) => _loadReceipts(),
+              ),
             ),
-            onSubmitted: (_) => _loadReceipts(),
           ),
-        ),
-        // Filters
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: AdvancedFilters(
-            selectedCategory: _category,
-            dateFrom: _dateFrom,
-            dateTo: _dateTo,
-            amountMin: _amountMin,
-            amountMax: _amountMax,
-            onCategoryChanged: (v) {
-              setState(() => _category = v);
-              _loadReceipts();
-            },
-            onDateFromChanged: (v) {
-              setState(() => _dateFrom = v);
-              _loadReceipts();
-            },
-            onDateToChanged: (v) {
-              setState(() => _dateTo = v);
-              _loadReceipts();
-            },
-            onAmountMinChanged: (v) => setState(() => _amountMin = v),
-            onAmountMaxChanged: (v) => setState(() => _amountMax = v),
-            onReset: () {
-              setState(() {
-                _category = null;
-                _dateFrom = null;
-                _dateTo = null;
-                _amountMin = null;
-                _amountMax = null;
-              });
-              _loadReceipts();
-            },
+          // Filters
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: AdvancedFilters(
+                selectedCategory: _category,
+                dateFrom: _dateFrom,
+                dateTo: _dateTo,
+                amountMin: _amountMin,
+                amountMax: _amountMax,
+                onCategoryChanged: (v) {
+                  setState(() => _category = v);
+                  _loadReceipts();
+                },
+                onDateFromChanged: (v) {
+                  setState(() => _dateFrom = v);
+                  _loadReceipts();
+                },
+                onDateToChanged: (v) {
+                  setState(() => _dateTo = v);
+                  _loadReceipts();
+                },
+                onAmountMinChanged: (v) => setState(() => _amountMin = v),
+                onAmountMaxChanged: (v) => setState(() => _amountMax = v),
+                onReset: () {
+                  setState(() {
+                    _category = null;
+                    _dateFrom = null;
+                    _dateTo = null;
+                    _amountMin = null;
+                    _amountMax = null;
+                  });
+                  _loadReceipts();
+                },
+              ),
+            ),
           ),
-        ),
-        // List
-        Expanded(
-          child: _isLoading
-              ? const LoadingSpinner(message: 'Ładowanie paragonów...')
-              : _receipts.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.receipt_long_rounded,
-                      title: 'Brak paragonów',
-                      subtitle:
-                          'Zrób zdjęcie pierwszego paragonu, aby rozpocząć!',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () async => _loadReceipts(),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _receipts.length + (_hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _receipts.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2)),
-                            );
-                          }
-                          final receipt = _receipts[index];
-                          return ReceiptCard(
-                            receipt: receipt,
-                            onEdit: () => _showEditDialog(receipt),
-                            onDelete: () => _deleteReceipt(receipt),
-                            onAddWarranty: () {
-                              // TODO: Navigate to add warranty
-                            },
-                          );
-                        },
-                      ),
-                    ),
-        ),
-      ],
+          // List
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: LoadingSpinner(message: 'Ładowanie paragonów...'),
+            )
+          else if (_receipts.isEmpty)
+            const SliverFillRemaining(
+              child: EmptyState(
+                icon: Icons.receipt_long_rounded,
+                title: 'Brak paragonów',
+                subtitle:
+                    'Zrób zdjęcie pierwszego paragonu, aby rozpocząć!',
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index == _receipts.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2)),
+                      );
+                    }
+                    final receipt = _receipts[index];
+                    return ReceiptCard(
+                      receipt: receipt,
+                      onEdit: () => _showEditDialog(receipt),
+                      onDelete: () => _deleteReceipt(receipt),
+                      onAddWarranty: () {
+                        // TODO: Navigate to add warranty
+                      },
+                    );
+                  },
+                  childCount: _receipts.length + (_hasMore ? 1 : 0),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
