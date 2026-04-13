@@ -6,12 +6,12 @@ class AppConstants {
 
   // Supabase - replace with actual values or use env
   static const String supabaseUrl = String.fromEnvironment(
-    'https://hxzimocyiblbyoxjxmhj.supabase.co',
-    defaultValue: 'https://your-project.supabase.co',
+    'SUPABASE_URL',
+    defaultValue: 'https://hxzimocyiblbyoxjxmhj.supabase.co',
   );
   static const String supabaseAnonKey = String.fromEnvironment(
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4emltb2N5aWJsYnlveGp4bWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjU2MTksImV4cCI6MjA3NzY0MTYxOX0.4mBr-eLUfhGjeDGfzReS7rXRaFouyH8wrJgSLE1ogso',
-    defaultValue: 'your-anon-key',
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4emltb2N5aWJsYnlveGp4bWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjU2MTksImV4cCI6MjA3NzY0MTYxOX0.4mBr-eLUfhGjeDGfzReS7rXRaFouyH8wrJgSLE1ogso',
   );
 
   // Storage
