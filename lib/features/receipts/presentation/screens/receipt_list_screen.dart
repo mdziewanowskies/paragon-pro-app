@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
@@ -8,6 +9,9 @@ import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
 import '../widgets/receipt_card.dart';
 import '../widgets/receipt_edit_dialog.dart';
+
+/// Provider used to signal receipt list refresh from outside (e.g. after upload)
+final receiptListRefreshProvider = StateProvider<int>((ref) => 0);
 
 class ReceiptListScreen extends ConsumerStatefulWidget {
   const ReceiptListScreen({super.key});
@@ -32,6 +36,8 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   DateTime? _dateTo;
   double? _amountMin;
   double? _amountMax;
+
+  int _lastRefreshSignal = 0;
 
   @override
   void initState() {
@@ -150,6 +156,13 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for refresh signal from ReceiptUpload
+    final refreshSignal = ref.watch(receiptListRefreshProvider);
+    if (refreshSignal != _lastRefreshSignal) {
+      _lastRefreshSignal = refreshSignal;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadReceipts());
+    }
+
     return RefreshIndicator(
       onRefresh: () async => _loadReceipts(),
       child: CustomScrollView(
@@ -246,6 +259,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                     final receipt = _receipts[index];
                     return ReceiptCard(
                       receipt: receipt,
+                      onTap: () => _showImagePreview(receipt),
                       onEdit: () => _showEditDialog(receipt),
                       onDelete: () => _deleteReceipt(receipt),
                       onAddWarranty: () {
@@ -268,6 +282,102 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       builder: (context) => ReceiptEditDialog(
         receipt: receipt,
         onSaved: () => _loadReceipts(),
+      ),
+    );
+  }
+
+  void _showImagePreview(ReceiptModel receipt) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            // Zdjęcie
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: CachedNetworkImage(
+                    imageUrl: receipt.imageUrl,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: Colors.grey[900],
+                      child: const Center(
+                        child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Przycisk zamknij
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                ),
+              ),
+            ),
+            // Info na dole
+            if (receipt.merchantName != null || receipt.amount != null)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.8),
+                      ],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (receipt.merchantName != null)
+                        Text(
+                          receipt.merchantName!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      if (receipt.amount != null)
+                        Text(
+                          '${receipt.amount!.toStringAsFixed(2)} zł',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

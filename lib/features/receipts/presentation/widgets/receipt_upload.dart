@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +8,7 @@ import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/offline_sync_service.dart';
 import '../../data/receipt_repository.dart';
+import '../screens/receipt_list_screen.dart';
 
 class ReceiptUpload extends ConsumerStatefulWidget {
   final VoidCallback? onUploaded;
@@ -87,40 +89,65 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
       );
 
       // Analyze with AI
-      final aiResponse = await SupabaseService.invokeFunction(
-        'analyze-receipt',
-        body: {'imageUrl': publicUrl, 'userId': userId},
-      );
-
       Map<String, dynamic> receiptData = {
         'user_id': userId,
         'image_url': publicUrl,
       };
 
-      if (aiResponse.data != null) {
-        final aiData = aiResponse.data as Map<String, dynamic>;
-        receiptData.addAll({
-          'merchant_name': aiData['merchantName'],
-          'merchant_address': aiData['merchantAddress'],
-          'amount': aiData['amount'],
-          'purchase_date': aiData['purchaseDate'],
-          'category': aiData['category'],
-          'categories': aiData['categories'],
-          'items': aiData['items'],
-          'receipt_number': aiData['receiptNumber'],
-          'ai_processed': true,
-          'ai_confidence': aiData['confidence'],
-        });
+      try {
+        final aiResponse = await SupabaseService.invokeFunction(
+          'analyze-receipt',
+          body: {'imageUrl': publicUrl, 'userId': userId},
+        );
+
+        debugPrint('=== AI RESPONSE ===');
+        debugPrint('Status: ${aiResponse.status}');
+        debugPrint('Data type: ${aiResponse.data?.runtimeType}');
+        debugPrint('Data: ${aiResponse.data}');
+
+        if (aiResponse.data != null) {
+          final raw = aiResponse.data;
+          final aiData = raw is Map<String, dynamic>
+              ? raw
+              : (raw is Map ? Map<String, dynamic>.from(raw) : null);
+
+          if (aiData != null) {
+            // Try both camelCase and snake_case keys from Edge Function
+            receiptData.addAll({
+              'merchant_name': aiData['merchantName'] ?? aiData['merchant_name'],
+              'merchant_address': aiData['merchantAddress'] ?? aiData['merchant_address'],
+              'amount': aiData['amount'] != null
+                  ? (aiData['amount'] is String
+                      ? double.tryParse(aiData['amount'])
+                      : (aiData['amount'] as num?)?.toDouble())
+                  : null,
+              'purchase_date': aiData['purchaseDate'] ?? aiData['purchase_date'],
+              'category': aiData['category'],
+              'categories': aiData['categories'],
+              'items': aiData['items'],
+              'receipt_number': aiData['receiptNumber'] ?? aiData['receipt_number'],
+              'ai_processed': true,
+              'ai_confidence': aiData['confidence'] ?? aiData['ai_confidence'],
+            });
+          }
+        }
+      } catch (aiError) {
+        debugPrint('AI analyze failed (non-blocking): $aiError');
+        // Non-blocking — still save the receipt without AI data
       }
 
       // Insert receipt
       await ref.read(receiptRepositoryProvider).createReceipt(receiptData);
 
-      // Process gamification
-      await SupabaseService.invokeFunction(
-        'process-gamification',
-        body: {'userId': userId},
-      );
+      // Process gamification (non-blocking)
+      try {
+        await SupabaseService.invokeFunction(
+          'process-gamification',
+          body: {'userId': userId},
+        );
+      } catch (e) {
+        debugPrint('Gamification processing failed: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -137,6 +164,8 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
           ),
         );
         widget.onUploaded?.call();
+        // Signal receipt list to refresh
+        ref.read(receiptListRefreshProvider.notifier).state++;
       }
     } catch (e) {
       if (mounted) {
