@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/utils/validators.dart';
+import '../../data/ksef_repository.dart';
+import '../../data/ksef_api_service.dart';
+import '../../data/models/ksef_models.dart';
 
 class KsefSettings extends ConsumerStatefulWidget {
-  const KsefSettings({super.key});
+  final VoidCallback? onTokenSaved;
+
+  const KsefSettings({super.key, this.onTokenSaved});
 
   @override
   ConsumerState<KsefSettings> createState() => _KsefSettingsState();
@@ -15,6 +20,8 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
   final _tokenController = TextEditingController();
   bool _obscureToken = true;
   bool _isSaving = false;
+  bool _isTesting = false;
+  bool? _connectionOk;
 
   @override
   void dispose() {
@@ -42,6 +49,7 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
             _nipController.text.trim(),
             _tokenController.text.trim(),
           );
+      widget.onTokenSaved?.call();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Token KSeF zapisany pomyślnie!')),
@@ -57,11 +65,58 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
     }
   }
 
+  Future<void> _testConnection() async {
+    setState(() {
+      _isTesting = true;
+      _connectionOk = null;
+    });
+    try {
+      final repo = ref.read(ksefRepositoryProvider);
+      final ok = await repo.testConnection();
+      if (mounted) {
+        setState(() {
+          _connectionOk = ok;
+          _isTesting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ok
+                ? 'Połączenie z KSeF działa poprawnie!'
+                : 'Nie udało się połączyć z KSeF. Sprawdź NIP i token.'),
+            backgroundColor: ok ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } on KsefApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _connectionOk = false;
+          _isTesting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Błąd KSeF: ${e.message}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _connectionOk = false;
+          _isTesting = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(profileProvider).value;
+    final hasToken =
+        profile?.ksefToken != null && profile!.ksefToken!.isNotEmpty;
 
-    // Pre-fill if available
     if (_nipController.text.isEmpty && profile?.ksefNip != null) {
       _nipController.text = profile!.ksefNip!;
     }
@@ -80,6 +135,42 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                   'Integracja KSeF',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
+                const Spacer(),
+                if (hasToken)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: (_connectionOk ?? true)
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : Colors.red.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          (_connectionOk ?? true)
+                              ? Icons.check_circle
+                              : Icons.error,
+                          size: 14,
+                          color:
+                              (_connectionOk ?? true) ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Skonfigurowano',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: (_connectionOk ?? true)
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -108,7 +199,7 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                               fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         Text(
-                          'Twój token KSeF jest przechowywany bezpiecznie i używany tylko do komunikacji z API KSeF.',
+                          'Połączenie bezpośrednio z ${KsefEnvironmentExtension(KsefEnvironment.production).label} KSeF (ksef.mf.gov.pl)',
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(context)
@@ -179,7 +270,9 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
               obscureText: _obscureToken,
               decoration: InputDecoration(
                 labelText: 'Token API KSeF *',
-                hintText: 'Wklej token z portalu KSeF',
+                hintText: hasToken
+                    ? '••••••••  (zapisany)'
+                    : 'Wklej token z portalu KSeF',
                 suffixIcon: IconButton(
                   icon: Icon(
                       _obscureToken ? Icons.visibility_off : Icons.visibility),
@@ -189,18 +282,48 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
               ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveToken,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Zapisz token KSeF'),
-              ),
+            // Buttons row
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _saveToken,
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Zapisz token'),
+                  ),
+                ),
+                if (hasToken) ...[
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: _isTesting ? null : _testConnection,
+                    icon: _isTesting
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            _connectionOk == true
+                                ? Icons.check_circle
+                                : Icons.wifi_tethering,
+                            size: 18,
+                          ),
+                    label: Text(
+                      _isTesting
+                          ? 'Testowanie...'
+                          : _connectionOk == true
+                              ? 'OK'
+                              : 'Test połączenia',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
