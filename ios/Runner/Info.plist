@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Paragon Pro</string>
+	<string>ParagonPro</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>paragon_pro</string>
+	<string>ParagonPro</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -24,6 +24,16 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ParagonPro potrzebuje dostępu do aparatu, aby skanować paragony i faktury.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ParagonPro potrzebuje dostępu do galerii, aby dodawać zdjęcia paragonów.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ParagonPro zapisuje wygenerowane dokumenty (pisma reklamacyjne, raporty) w galerii.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon nie jest używany przez aplikację.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>ParagonPro używa sieci lokalnej do synchronizacji danych.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
