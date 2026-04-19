@@ -55,16 +55,23 @@ class KsefApiService {
     try {
       final response = await _dio.post(url, data: body);
       debugPrint('KSeF InitToken response: ${response.statusCode}');
+      debugPrint('KSeF InitToken data type: ${response.data?.runtimeType}');
       debugPrint('KSeF InitToken data: ${response.data}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _session = KsefSessionToken.fromJson(
-            response.data as Map<String, dynamic>);
+        final responseData = _parseResponseData(response.data);
+        if (responseData == null) {
+          throw KsefApiException(
+            'Nieprawidłowa odpowiedź z KSeF InitToken',
+            details: response.data?.toString(),
+          );
+        }
 
+        _session = KsefSessionToken.fromJson(responseData);
         _dio.options.headers['SessionToken'] = _session!.sessionToken;
 
         debugPrint(
-            'KSeF Session established. Ref: ${_session!.referenceNumber}');
+            'KSeF Session established. Token: ${_session!.sessionToken.substring(0, 20)}...');
         return _session!;
       }
 
@@ -79,7 +86,7 @@ class KsefApiService {
   }
 
   /// KSeF API v2: POST /online/Session/AuthorisationChallenge
-  Future<Map<String, dynamic>> _getAuthChallenge(String nip) async {
+  Future<void> _getAuthChallenge(String nip) async {
     final url = '$_baseUrl/online/Session/AuthorisationChallenge';
     final body = {
       'contextIdentifier': {
@@ -91,7 +98,8 @@ class KsefApiService {
     try {
       final response = await _dio.post(url, data: body);
       debugPrint('KSeF AuthChallenge: ${response.statusCode}');
-      return response.data as Map<String, dynamic>;
+      debugPrint('KSeF AuthChallenge data type: ${response.data?.runtimeType}');
+      debugPrint('KSeF AuthChallenge data: ${response.data}');
     } on DioException catch (e) {
       throw _handleDioError(e, 'AuthorisationChallenge');
     }
@@ -110,7 +118,7 @@ class KsefApiService {
           headers: {'SessionToken': _session!.sessionToken},
         ),
       );
-      return response.data as Map<String, dynamic>;
+      return _parseResponseData(response.data)!;
     } on DioException catch (e) {
       throw _handleDioError(e, 'SessionStatus');
     }
@@ -160,7 +168,7 @@ class KsefApiService {
 
       debugPrint('KSeF QuerySync response: ${response.statusCode}');
 
-      final data = response.data as Map<String, dynamic>;
+      final data = _parseResponseData(response.data)!;
       final invoiceHeaderList =
           data['invoiceHeaderList'] as List<dynamic>? ?? [];
 
@@ -193,7 +201,7 @@ class KsefApiService {
         ),
       );
 
-      final data = response.data as Map<String, dynamic>;
+      final data = _parseResponseData(response.data)!;
       final queryId =
           data['elementReferenceNumber'] as String? ??
               data['queryElementReferenceNumber'] as String? ??
@@ -218,7 +226,7 @@ class KsefApiService {
           headers: {'SessionToken': _session!.sessionToken},
         ),
       );
-      return response.data as Map<String, dynamic>;
+      return _parseResponseData(response.data)!;
     } on DioException catch (e) {
       throw _handleDioError(e, 'QueryInvoiceAsyncStatus');
     }
@@ -239,7 +247,7 @@ class KsefApiService {
         ),
       );
 
-      final data = response.data as Map<String, dynamic>;
+      final data = _parseResponseData(response.data)!;
       final invoiceHeaderList =
           data['invoiceHeaderList'] as List<dynamic>? ?? [];
 
@@ -286,13 +294,25 @@ class KsefApiService {
       final response = await _dio.get(
         '$_baseUrl/common/Invoice/$ksefReferenceNumber/Status',
       );
-      return response.data as Map<String, dynamic>;
+      return _parseResponseData(response.data)!;
     } on DioException catch (e) {
       throw _handleDioError(e, 'InvoiceStatus');
     }
   }
 
   // ─── HELPERS ──────────────────────────────────────────────────
+
+  Map<String, dynamic>? _parseResponseData(dynamic data) {
+    if (data == null) return null;
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is String) {
+      debugPrint('KSeF: response is String, not JSON map: ${data.substring(0, data.length.clamp(0, 200))}');
+      return null;
+    }
+    debugPrint('KSeF: unexpected response type: ${data.runtimeType}');
+    return null;
+  }
 
   void _ensureSession() {
     if (_session == null) {
