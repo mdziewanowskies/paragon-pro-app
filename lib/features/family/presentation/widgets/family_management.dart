@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../gamification/data/best_achievement_provider.dart';
 
-class FamilyManagement extends StatefulWidget {
+class FamilyManagement extends ConsumerStatefulWidget {
   final Map<String, dynamic> familyData;
   final VoidCallback? onInviteSent;
 
@@ -12,10 +14,10 @@ class FamilyManagement extends StatefulWidget {
   });
 
   @override
-  State<FamilyManagement> createState() => _FamilyManagementState();
+  ConsumerState<FamilyManagement> createState() => _FamilyManagementState();
 }
 
-class _FamilyManagementState extends State<FamilyManagement> {
+class _FamilyManagementState extends ConsumerState<FamilyManagement> {
   final _inviteController = TextEditingController();
 
   @override
@@ -129,6 +131,9 @@ class _FamilyManagementState extends State<FamilyManagement> {
         ...members.map((m) {
           final profile = m['profiles'] as Map<String, dynamic>?;
           final memberRole = m['role'] as String? ?? 'member';
+          final memberId = m['user_id'] as String? ?? '';
+          final bestAchievement = ref.watch(bestAchievementProvider(memberId));
+
           return ListTile(
             leading: CircleAvatar(
               backgroundColor:
@@ -151,9 +156,36 @@ class _FamilyManagementState extends State<FamilyManagement> {
                   '${profile?['first_name'] ?? ''} ${profile?['last_name'] ?? ''}'
                       .trim(),
             ),
-            trailing: memberRole == 'admin'
-                ? const Icon(Icons.star_rounded, color: Colors.amber, size: 20)
-                : null,
+            subtitle: bestAchievement.when(
+              data: (a) => a != null
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          a['icon'] as String? ?? '\u{1F3C6}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          a['name'] as String? ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    )
+                  : null,
+              loading: () => null,
+              error: (_, __) => null,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (memberRole == 'admin')
+                  const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+              ],
+            ),
           );
         }),
         // Invite section

@@ -53,13 +53,35 @@ final challengesProvider =
   if (userId == null) return [];
 
   final now = DateTime.now();
-  final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  final monthStart = DateTime(now.year, now.month, 1);
+  final monthEnd = DateTime(now.year, now.month + 1, 0);
 
-  final challenges = await SupabaseService.client
-      .from('monthly_challenges')
-      .select()
-      .eq('month', monthKey)
-      .eq('active', true);
+  List<dynamic> challenges;
+  try {
+    // Try text-based month column first (YYYY-MM format)
+    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    challenges = await SupabaseService.client
+        .from('monthly_challenges')
+        .select()
+        .eq('month', monthKey)
+        .eq('active', true);
+  } catch (_) {
+    try {
+      // Fallback: date-based month column — query by range
+      challenges = await SupabaseService.client
+          .from('monthly_challenges')
+          .select()
+          .gte('month', monthStart.toIso8601String().split('T').first)
+          .lte('month', monthEnd.toIso8601String().split('T').first)
+          .eq('active', true);
+    } catch (_) {
+      // Last fallback: just get all active challenges
+      challenges = await SupabaseService.client
+          .from('monthly_challenges')
+          .select()
+          .eq('active', true);
+    }
+  }
 
   final progress = await SupabaseService.client
       .from('user_challenge_progress')
@@ -70,7 +92,7 @@ final challengesProvider =
     for (var p in (progress as List)) p['challenge_id']: p,
   };
 
-  return (challenges as List).map((c) {
+  return challenges.map((c) {
     final p = progressMap[c['id']];
     return <String, dynamic>{
       ...Map<String, dynamic>.from(c),

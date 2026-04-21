@@ -7,6 +7,8 @@ class GamificationProgress extends StatelessWidget {
   final int points;
   final int streakDays;
   final int totalReceipts;
+  final String? bestAchievementIcon;
+  final String? bestAchievementName;
 
   const GamificationProgress({
     super.key,
@@ -14,6 +16,8 @@ class GamificationProgress extends StatelessWidget {
     this.points = 0,
     this.streakDays = 0,
     this.totalReceipts = 0,
+    this.bestAchievementIcon,
+    this.bestAchievementName,
   });
 
   @override
@@ -84,6 +88,32 @@ class GamificationProgress extends StatelessWidget {
               ),
             ],
           ),
+          // Best achievement badge
+          if (bestAchievementIcon != null && bestAchievementName != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(bestAchievementIcon!, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 6),
+                  Text(
+                    bestAchievementName!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),

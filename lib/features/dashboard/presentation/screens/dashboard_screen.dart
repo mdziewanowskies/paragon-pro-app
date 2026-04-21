@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
@@ -213,13 +214,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     gamification.when(
                       loading: () => const SizedBox(height: 150),
                       error: (_, __) => const SizedBox.shrink(),
-                      data: (data) => GamificationProgress(
-                        level: data['level'] as int? ?? 1,
-                        points: data['points'] as int? ?? 0,
-                        streakDays: data['streak_count'] as int? ?? 0,
-                        totalReceipts:
-                            data['total_receipts'] as int? ?? 0,
-                      ),
+                      data: (data) {
+                        final userId =
+                            SupabaseService.auth.currentUser?.id ?? '';
+                        final best =
+                            ref.watch(bestAchievementProvider(userId));
+                        return GamificationProgress(
+                          level: data['level'] as int? ?? 1,
+                          points: data['points'] as int? ?? 0,
+                          streakDays:
+                              data['streak_count'] as int? ?? 0,
+                          totalReceipts:
+                              data['total_receipts'] as int? ?? 0,
+                          bestAchievementIcon: best.value?['icon'] as String?,
+                          bestAchievementName: best.value?['name'] as String?,
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                     // Receipt upload
