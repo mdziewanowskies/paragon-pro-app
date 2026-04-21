@@ -140,13 +140,15 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // KSeF settings (always visible, collapsible when configured)
-            KsefSettings(
-              onTokenSaved: () => setState(() {}),
-            ),
-            const SizedBox(height: 16),
+            // KSeF settings — only when not configured
+            if (!hasKsefToken) ...[
+              KsefSettings(
+                onTokenSaved: () => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+            ],
 
-            // Sync section
+            // Sync section — only when configured
             if (hasKsefToken) ...[
               Card(
                 child: Padding(
