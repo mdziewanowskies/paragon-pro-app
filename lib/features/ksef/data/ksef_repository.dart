@@ -2,12 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/profile_service.dart';
-import 'ksef_api_service.dart';
-import 'models/ksef_models.dart';
-
-final ksefApiServiceProvider = Provider<KsefApiService>((ref) {
-  return KsefApiService(environment: KsefEnvironment.production);
-});
 
 final ksefRepositoryProvider = Provider<KsefRepository>((ref) {
   return KsefRepository(ref);
@@ -18,146 +12,117 @@ class KsefRepository {
 
   KsefRepository(this._ref);
 
-  KsefApiService get _api => _ref.read(ksefApiServiceProvider);
-
-  /// Start a KSeF session using stored credentials from profile
-  Future<KsefSessionToken> startSession() async {
-    final profile = _ref.read(profileProvider).value;
-    if (profile == null) {
-      throw KsefApiException('Zaloguj się do aplikacji');
-    }
-    if (profile.ksefNip == null || profile.ksefNip!.isEmpty) {
-      throw KsefApiException('Uzupełnij NIP w ustawieniach KSeF');
-    }
-    if (profile.ksefToken == null || profile.ksefToken!.isEmpty) {
-      throw KsefApiException('Uzupełnij token API KSeF w ustawieniach');
-    }
-
-    return await _api.initSessionWithToken(
-      nip: profile.ksefNip!,
-      apiToken: profile.ksefToken!,
-    );
-  }
-
-  /// Ensure we have an active session, start one if needed
-  Future<void> ensureSession() async {
-    if (!_api.hasActiveSession) {
-      await startSession();
-    }
-  }
-
-  /// Fetch invoices from KSeF and save them to Supabase
+  /// Sync invoices from KSeF via Edge Function.
+  /// The Edge Function reads ksef_token and ksef_nip from the user's
+  /// profile internally — no need to pass them from the client.
   Future<KsefSyncResult> syncInvoices({
-    required DateTime dateFrom,
-    required DateTime dateTo,
-    String subjectType = 'subject1',
+    DateTime? dateFrom,
+    DateTime? dateTo,
   }) async {
-    await ensureSession();
-
     final userId = SupabaseService.auth.currentUser?.id;
-    if (userId == null) throw KsefApiException('Użytkownik niezalogowany');
+    if (userId == null) throw KsefException('Użytkownik niezalogowany');
 
-    debugPrint('=== KSeF Sync: $dateFrom - $dateTo ===');
+    _ensureKsefConfigured();
 
-    final criteria = KsefQueryCriteria(
-      dateFrom: dateFrom,
-      dateTo: dateTo,
-      subjectType: subjectType,
-    );
+    debugPrint('=== KSeF Sync via Edge Function ===');
+    debugPrint('dateFrom: $dateFrom, dateTo: $dateTo');
 
-    // Try synchronous query first (up to 100 invoices)
-    List<KsefInvoice> invoices;
     try {
-      invoices = await _api.queryInvoicesSync(criteria: criteria);
+      final response = await SupabaseService.invokeFunction(
+        'fetch-ksef-invoices',
+        body: {
+          if (dateFrom != null)
+            'dateFrom': dateFrom.toIso8601String().split('T').first,
+          if (dateTo != null)
+            'dateTo': dateTo.toIso8601String().split('T').first,
+        },
+      );
+
+      debugPrint('KSeF Edge Function response status: ${response.status}');
+      debugPrint('KSeF Edge Function data: ${response.data}');
+
+      if (response.data == null) {
+        return KsefSyncResult(totalFetched: 0, saved: 0, skipped: 0);
+      }
+
+      final data = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final count = data['count'] as int? ?? 0;
+      final saved = data['saved'] as int? ?? count;
+      final skipped = data['skipped'] as int? ?? 0;
+      final error = data['error'] as String?;
+
+      if (error != null) {
+        throw KsefException(error);
+      }
+
+      return KsefSyncResult(
+        totalFetched: count,
+        saved: saved,
+        skipped: skipped,
+      );
     } catch (e) {
-      debugPrint('Sync query failed, trying async: $e');
-      invoices = await _fetchInvoicesAsync(criteria);
+      if (e is KsefException) rethrow;
+      debugPrint('KSeF sync error: $e');
+      throw KsefException('Błąd synchronizacji KSeF: $e');
     }
-
-    debugPrint('KSeF: fetched ${invoices.length} invoices');
-
-    // Save to Supabase
-    int saved = 0;
-    int skipped = 0;
-    for (final invoice in invoices) {
-      try {
-        // Check if already exists
-        final existing = await SupabaseService.client
-            .from('receipts')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('ksef_number', invoice.ksefReferenceNumber)
-            .maybeSingle();
-
-        if (existing != null) {
-          skipped++;
-          continue;
-        }
-
-        // Insert new invoice as receipt
-        await SupabaseService.client
-            .from('receipts')
-            .insert(invoice.toReceiptJson(userId));
-        saved++;
-      } catch (e) {
-        debugPrint(
-            'KSeF: failed to save invoice ${invoice.ksefReferenceNumber}: $e');
-      }
-    }
-
-    debugPrint('KSeF Sync complete: $saved saved, $skipped skipped');
-
-    // Terminate session
-    await _api.terminateSession();
-
-    return KsefSyncResult(
-      totalFetched: invoices.length,
-      saved: saved,
-      skipped: skipped,
-    );
   }
 
-  /// Fetch invoices using async query (for large datasets)
-  Future<List<KsefInvoice>> _fetchInvoicesAsync(
-      KsefQueryCriteria criteria) async {
-    final queryId = await _api.queryInvoicesAsyncInit(criteria: criteria);
+  /// Download a single invoice as PDF via Edge Function
+  Future<String?> downloadInvoice(String ksefNumber) async {
+    _ensureKsefConfigured();
 
-    // Poll for completion (max 60 seconds)
-    for (int i = 0; i < 30; i++) {
-      await Future.delayed(const Duration(seconds: 2));
-
-      final status = await _api.queryInvoicesAsyncStatus(queryId);
-      final processingCode = status['processingCode'] as int? ?? 0;
-
-      debugPrint('KSeF Async status: processingCode=$processingCode');
-
-      if (processingCode == 200) {
-        // Ready to fetch
-        return await _api.queryInvoicesAsyncFetch(queryId);
-      }
-      if (processingCode >= 400) {
-        throw KsefApiException(
-          'Błąd zapytania KSeF: ${status['processingDescription'] ?? processingCode}',
-        );
-      }
-    }
-
-    throw KsefApiException('Przekroczono czas oczekiwania na dane z KSeF');
-  }
-
-  /// Download full invoice XML
-  Future<String> downloadInvoiceXml(String ksefReferenceNumber) async {
-    await ensureSession();
-    final xml = await _api.downloadInvoice(ksefReferenceNumber);
-    await _api.terminateSession();
-    return xml;
-  }
-
-  /// Test connection - try to start and terminate session
-  Future<bool> testConnection() async {
     try {
-      await startSession();
-      await _api.terminateSession();
+      final response = await SupabaseService.invokeFunction(
+        'download-ksef-invoice',
+        body: {'ksefNumber': ksefNumber},
+      );
+
+      debugPrint('KSeF download response: ${response.status}');
+
+      if (response.data == null) return null;
+
+      final data = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : null;
+
+      return data?['url'] as String? ?? data?['xml'] as String?;
+    } catch (e) {
+      debugPrint('KSeF download error: $e');
+      throw KsefException('Błąd pobierania faktury: $e');
+    }
+  }
+
+  /// Test KSeF connection by calling the edge function
+  Future<bool> testConnection() async {
+    _ensureKsefConfigured();
+
+    try {
+      final response = await SupabaseService.invokeFunction(
+        'fetch-ksef-invoices',
+        body: {
+          'dateFrom': DateTime.now()
+              .subtract(const Duration(days: 1))
+              .toIso8601String()
+              .split('T')
+              .first,
+          'dateTo': DateTime.now().toIso8601String().split('T').first,
+        },
+      );
+
+      debugPrint('KSeF test response: ${response.status}');
+      debugPrint('KSeF test data: ${response.data}');
+
+      // If we got a response without error, connection is OK
+      if (response.data is Map) {
+        final error = (response.data as Map)['error'];
+        if (error != null) {
+          debugPrint('KSeF test failed: $error');
+          return false;
+        }
+      }
       return true;
     } catch (e) {
       debugPrint('KSeF test connection failed: $e');
@@ -165,10 +130,14 @@ class KsefRepository {
     }
   }
 
-  /// Get invoice status from KSeF (public endpoint, no session needed)
-  Future<Map<String, dynamic>> getInvoiceStatus(
-      String ksefReferenceNumber) async {
-    return await _api.getInvoiceStatus(ksefReferenceNumber);
+  void _ensureKsefConfigured() {
+    final profile = _ref.read(profileProvider).value;
+    if (profile?.ksefNip == null || profile!.ksefNip!.isEmpty) {
+      throw KsefException('Uzupełnij NIP w ustawieniach KSeF');
+    }
+    if (profile.ksefToken == null || profile.ksefToken!.isEmpty) {
+      throw KsefException('Uzupełnij token API KSeF w ustawieniach');
+    }
   }
 }
 
@@ -184,10 +153,19 @@ class KsefSyncResult {
   });
 
   String get summary {
+    if (totalFetched == 0) return 'Brak nowych faktur w wybranym zakresie';
     final parts = <String>[];
     if (saved > 0) parts.add('$saved nowych');
     if (skipped > 0) parts.add('$skipped pominięto (duplikaty)');
-    if (parts.isEmpty) return 'Brak nowych faktur';
+    if (parts.isEmpty) return 'Pobrano $totalFetched faktur';
     return 'Pobrano ${parts.join(', ')}';
   }
+}
+
+class KsefException implements Exception {
+  final String message;
+  KsefException(this.message);
+
+  @override
+  String toString() => message;
 }

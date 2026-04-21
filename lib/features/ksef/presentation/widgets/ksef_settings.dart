@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../../data/ksef_repository.dart';
-import '../../data/ksef_api_service.dart';
-import '../../data/models/ksef_models.dart';
 
 class KsefSettings extends ConsumerStatefulWidget {
   final VoidCallback? onTokenSaved;
@@ -87,7 +85,7 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
           ),
         );
       }
-    } on KsefApiException catch (e) {
+    } on KsefException catch (e) {
       if (mounted) {
         setState(() {
           _connectionOk = false;
@@ -199,7 +197,7 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                               fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         Text(
-                          'Połączenie bezpośrednio z ${KsefEnvironmentExtension(KsefEnvironment.production).label} KSeF (ksef.mf.gov.pl)',
+                          'Twój token KSeF jest używany bezpiecznie przez serwer do komunikacji z API KSeF.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(context)

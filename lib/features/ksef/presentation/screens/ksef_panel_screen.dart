@@ -10,7 +10,6 @@ import '../widgets/vat_summary.dart';
 import '../../../receipts/data/receipt_repository.dart';
 import '../../../receipts/data/models/receipt_model.dart';
 import '../../data/ksef_repository.dart';
-import '../../data/ksef_api_service.dart';
 
 final ksefInvoicesProvider =
     FutureProvider.autoDispose<List<ReceiptModel>>((ref) async {
@@ -65,7 +64,7 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
           ),
         );
       }
-    } on KsefApiException catch (e) {
+    } on KsefException catch (e) {
       if (mounted) {
         setState(() => _syncMessage = null);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,19 +90,19 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
     }
   }
 
-  Future<void> _downloadXml(String ksefNumber) async {
+  Future<void> _downloadInvoice(String ksefNumber) async {
     try {
       final ksefRepo = ref.read(ksefRepositoryProvider);
-      final xml = await ksefRepo.downloadInvoiceXml(ksefNumber);
+      final result = await ksefRepo.downloadInvoice(ksefNumber);
 
-      if (mounted) {
+      if (mounted && result != null) {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: Text('XML: $ksefNumber'),
+            title: Text('Faktura: $ksefNumber'),
             content: SingleChildScrollView(
               child: SelectableText(
-                xml,
+                result,
                 style: const TextStyle(
                     fontSize: 11, fontFamily: 'monospace'),
               ),
@@ -117,10 +116,10 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
           ),
         );
       }
-    } on KsefApiException catch (e) {
+    } on KsefException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Błąd pobierania XML: ${e.message}')),
+          SnackBar(content: Text('Błąd pobierania faktury: ${e.message}')),
         );
       }
     }
@@ -267,7 +266,7 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
                     : KsefInvoiceTable(
                         invoices: list,
                         onDownloadXml: (ksefNumber) =>
-                            _downloadXml(ksefNumber),
+                            _downloadInvoice(ksefNumber),
                       ),
               ),
             ],
