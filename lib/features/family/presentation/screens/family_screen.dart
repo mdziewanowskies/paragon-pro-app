@@ -22,11 +22,37 @@ final familyProvider =
 
   final familyId = membership['family_id'] as String;
 
-  // Get members
+  // Get members (without join to profiles — no FK relationship)
   final members = await SupabaseService.client
       .from('family_members')
-      .select('user_id, role, joined_at, profiles(username, first_name, last_name)')
+      .select('user_id, role, joined_at')
       .eq('family_id', familyId);
+
+  // Fetch profiles separately for each member
+  final memberList = members as List;
+  final userIds = memberList
+      .map((m) => m['user_id'] as String)
+      .toList();
+
+  Map<String, Map<String, dynamic>> profileMap = {};
+  if (userIds.isNotEmpty) {
+    final profiles = await SupabaseService.client
+        .from('profiles')
+        .select('user_id, username, first_name, last_name')
+        .inFilter('user_id', userIds);
+    for (final p in profiles as List) {
+      profileMap[p['user_id'] as String] = Map<String, dynamic>.from(p);
+    }
+  }
+
+  // Attach profile data to each member
+  final enrichedMembers = memberList.map((m) {
+    final uid = m['user_id'] as String;
+    return <String, dynamic>{
+      ...Map<String, dynamic>.from(m),
+      'profiles': profileMap[uid],
+    };
+  }).toList();
 
   // Get pending invitations
   final invitations = await SupabaseService.client
@@ -38,7 +64,7 @@ final familyProvider =
   return {
     'family': membership['families'],
     'role': membership['role'],
-    'members': members,
+    'members': enrichedMembers,
     'invitations': invitations,
     'familyId': familyId,
   };
