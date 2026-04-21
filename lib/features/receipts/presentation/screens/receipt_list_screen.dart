@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
@@ -9,6 +10,7 @@ import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
 import '../widgets/receipt_card.dart';
 import '../widgets/receipt_edit_dialog.dart';
+import '../widgets/ksef_invoice_preview.dart';
 import '../../../warranties/presentation/widgets/warranty_dialog.dart';
 import '../../../complaints/presentation/widgets/complaint_letter_dialog.dart';
 
@@ -293,7 +295,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       ],
                     ),
                   ),
-                  // Row 2: Sorting
+                  // Row 2: Sorting + Zobacz wszystkie
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -368,6 +370,16 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                               value: 'merchant_asc',
                               child: Text('Sklep A-Z')),
                         ],
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () => context.go('/receipts'),
+                        icon: const Icon(Icons.grid_view_rounded, size: 16),
+                        label: const Text('Zobacz wszystkie',
+                            style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                     ],
                   ),
@@ -499,6 +511,15 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   }
 
   void _showImagePreview(ReceiptModel receipt) {
+    // KSeF invoices without image → rich invoice preview
+    if (receipt.isKsefInvoice && receipt.imageUrl.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => KsefInvoicePreviewDialog(receipt: receipt),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => Dialog(

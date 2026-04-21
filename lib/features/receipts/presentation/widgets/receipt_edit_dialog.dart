@@ -134,7 +134,7 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
               controller: _merchantController,
               decoration: const InputDecoration(labelText: 'Nazwa sklepu'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
             TextField(
               controller: _amountController,
               decoration: const InputDecoration(
@@ -143,7 +143,7 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
             DropdownButtonFormField<String>(
               initialValue: _category,
               decoration: const InputDecoration(labelText: 'Kategoria'),
@@ -152,7 +152,7 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
                   .toList(),
               onChanged: (v) => setState(() => _category = v),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
             TextField(
               controller: _notesController,
               decoration: const InputDecoration(labelText: 'Notatki'),
@@ -160,75 +160,71 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
             ),
 
             // KSeF section
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            const Divider(),
             SwitchListTile(
               title: const Text('Faktura KSeF',
-                  style: TextStyle(fontSize: 14)),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               value: _isKsefInvoice,
               onChanged: (v) => setState(() => _isKsefInvoice = v),
               contentPadding: EdgeInsets.zero,
-              dense: true,
             ),
             if (_isKsefInvoice) ...[
+              const SizedBox(height: 4),
               TextField(
                 controller: _ksefNumberController,
                 decoration: const InputDecoration(
-                    labelText: 'Numer KSeF', isDense: true),
-                style: const TextStyle(fontSize: 13),
+                    labelText: 'Numer KSeF'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _sellerNipController,
                       decoration: const InputDecoration(
-                          labelText: 'NIP sprzedawcy', isDense: true),
-                      style: const TextStyle(fontSize: 13),
+                          labelText: 'NIP sprzedawcy'),
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _buyerNipController,
                       decoration: const InputDecoration(
-                          labelText: 'NIP nabywcy', isDense: true),
-                      style: const TextStyle(fontSize: 13),
+                          labelText: 'NIP nabywcy'),
                       keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _netAmountController,
                       decoration: const InputDecoration(
-                          labelText: 'Netto', isDense: true),
-                      style: const TextStyle(fontSize: 13),
+                          labelText: 'Netto'),
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _vatAmountController,
                       decoration: const InputDecoration(
-                          labelText: 'VAT', isDense: true),
-                      style: const TextStyle(fontSize: 13),
+                          labelText: 'VAT'),
                       keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _vatRate,
                 decoration: const InputDecoration(
-                    labelText: 'Stawka VAT', isDense: true),
+                    labelText: 'Stawka VAT'),
                 items: _vatRates
                     .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                     .toList(),
@@ -237,7 +233,8 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
             ],
 
             // Family sharing
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            const Divider(),
             SwitchListTile(
               title: const Text('Udostępnij rodzinie',
                   style: TextStyle(fontSize: 14)),
@@ -246,7 +243,6 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
               value: _sharedWithFamily,
               onChanged: (v) => setState(() => _sharedWithFamily = v),
               contentPadding: EdgeInsets.zero,
-              dense: true,
             ),
           ],
         ),

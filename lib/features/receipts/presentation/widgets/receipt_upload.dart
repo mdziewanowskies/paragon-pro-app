@@ -251,19 +251,11 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
                   onTap: () => _pickAndUpload(ImageSource.camera),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: _UploadButton(
                   icon: Icons.photo_library_rounded,
-                  label: 'Z galerii',
-                  onTap: () => _pickAndUpload(ImageSource.gallery),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _UploadButton(
-                  icon: Icons.computer_rounded,
-                  label: 'Z komputera',
+                  label: 'Prześlij zdjęcie',
                   onTap: () => _pickAndUpload(ImageSource.gallery),
                 ),
               ),
