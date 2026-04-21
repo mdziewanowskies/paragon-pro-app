@@ -1,12 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/pdf_font_loader.dart';
 import '../../../receipts/data/models/receipt_model.dart';
 
 class ComplaintLetterDialog extends ConsumerStatefulWidget {
@@ -146,8 +149,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
 
   Future<void> _generateAndSharePdf() async {
     final profile = ref.read(profileProvider).value;
-    final font = await PdfGoogleFonts.notoSansRegular();
-    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final (font, fontBold) = await PdfFontLoader.loadWithFallback();
 
     final pdf = pw.Document();
 
@@ -220,7 +222,11 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
     final fileName =
         'reklamacja_${merchantName}_${DateTime.now().millisecondsSinceEpoch}';
 
-    await Printing.sharePdf(bytes: await pdf.save(), filename: '$fileName.pdf');
+    final pdfBytes = await pdf.save();
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$fileName.pdf');
+    await file.writeAsBytes(pdfBytes);
+    await Share.shareXFiles([XFile(file.path)], subject: 'Pismo reklamacyjne');
   }
 
   @override

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import '../../../../core/utils/pdf_font_loader.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../receipts/data/models/receipt_model.dart';
@@ -120,8 +120,7 @@ class _AdvancedExportState extends ConsumerState<AdvancedExport> {
 
     try {
       final receipts = await _getAllReceipts();
-      final font = await PdfGoogleFonts.notoSansRegular();
-      final fontBold = await PdfGoogleFonts.notoSansBold();
+      final (font, fontBold) = await PdfFontLoader.loadWithFallback();
 
       final now = DateTime.now();
       final thisMonthReceipts = receipts
@@ -259,11 +258,14 @@ class _AdvancedExportState extends ConsumerState<AdvancedExport> {
         ),
       );
 
-      await Printing.sharePdf(
-        bytes: await pdf.save(),
-        filename:
-            'raport_paragonpro_${DateTime.now().millisecondsSinceEpoch}.pdf',
-      );
+      final pdfBytes = await pdf.save();
+      final pdfFileName =
+          'raport_paragonpro_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final pdfDir = await getTemporaryDirectory();
+      final pdfFile = File('${pdfDir.path}/$pdfFileName');
+      await pdfFile.writeAsBytes(pdfBytes);
+      await Share.shareXFiles([XFile(pdfFile.path)],
+          subject: 'Raport ParagonPro');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
