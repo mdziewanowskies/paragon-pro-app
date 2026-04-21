@@ -22,8 +22,19 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
   late final TextEditingController _merchantController;
   late final TextEditingController _amountController;
   late final TextEditingController _notesController;
+  // KSeF fields
+  late final TextEditingController _ksefNumberController;
+  late final TextEditingController _sellerNipController;
+  late final TextEditingController _buyerNipController;
+  late final TextEditingController _netAmountController;
+  late final TextEditingController _vatAmountController;
   String? _category;
+  String? _vatRate;
+  bool _isKsefInvoice = false;
+  bool _sharedWithFamily = false;
   bool _isSaving = false;
+
+  static const _vatRates = ['23%', '8%', '5%', '0%', 'ZW', 'mieszana'];
 
   @override
   void initState() {
@@ -33,7 +44,20 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
     _amountController =
         TextEditingController(text: widget.receipt.amount?.toString() ?? '');
     _notesController = TextEditingController(text: widget.receipt.notes);
+    _ksefNumberController =
+        TextEditingController(text: widget.receipt.ksefNumber);
+    _sellerNipController =
+        TextEditingController(text: widget.receipt.sellerNip);
+    _buyerNipController =
+        TextEditingController(text: widget.receipt.buyerNip);
+    _netAmountController =
+        TextEditingController(text: widget.receipt.netAmount?.toString() ?? '');
+    _vatAmountController =
+        TextEditingController(text: widget.receipt.vatAmount?.toString() ?? '');
     _category = widget.receipt.category;
+    _vatRate = widget.receipt.vatRate;
+    _isKsefInvoice = widget.receipt.isKsefInvoice;
+    _sharedWithFamily = widget.receipt.sharedWithFamily;
   }
 
   @override
@@ -41,21 +65,48 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
     _merchantController.dispose();
     _amountController.dispose();
     _notesController.dispose();
+    _ksefNumberController.dispose();
+    _sellerNipController.dispose();
+    _buyerNipController.dispose();
+    _netAmountController.dispose();
+    _vatAmountController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
     try {
+      final updates = <String, dynamic>{
+        'merchant_name': _merchantController.text,
+        'amount': double.tryParse(_amountController.text),
+        'category': _category,
+        'notes': _notesController.text,
+        'is_ksef_invoice': _isKsefInvoice,
+        'shared_with_family': _sharedWithFamily,
+      };
+
+      if (_isKsefInvoice) {
+        updates.addAll({
+          'ksef_number': _ksefNumberController.text.isEmpty
+              ? null
+              : _ksefNumberController.text,
+          'seller_nip': _sellerNipController.text.isEmpty
+              ? null
+              : _sellerNipController.text,
+          'buyer_nip': _buyerNipController.text.isEmpty
+              ? null
+              : _buyerNipController.text,
+          'net_amount': double.tryParse(_netAmountController.text),
+          'vat_amount': double.tryParse(_vatAmountController.text),
+          'gross_amount': double.tryParse(_amountController.text),
+          'vat_rate': _vatRate,
+        });
+      }
+
       await ref.read(receiptRepositoryProvider).updateReceipt(
-        widget.receipt.id,
-        {
-          'merchant_name': _merchantController.text,
-          'amount': double.tryParse(_amountController.text),
-          'category': _category,
-          'notes': _notesController.text,
-        },
-      );
+            widget.receipt.id,
+            updates,
+          );
       widget.onSaved?.call();
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -72,10 +123,12 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edytuj paragon'),
+      title: Text(
+          _isKsefInvoice ? 'Edytuj fakturę KSeF' : 'Edytuj paragon'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
               controller: _merchantController,
@@ -103,7 +156,97 @@ class _ReceiptEditDialogState extends ConsumerState<ReceiptEditDialog> {
             TextField(
               controller: _notesController,
               decoration: const InputDecoration(labelText: 'Notatki'),
-              maxLines: 3,
+              maxLines: 2,
+            ),
+
+            // KSeF section
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Faktura KSeF',
+                  style: TextStyle(fontSize: 14)),
+              value: _isKsefInvoice,
+              onChanged: (v) => setState(() => _isKsefInvoice = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            if (_isKsefInvoice) ...[
+              TextField(
+                controller: _ksefNumberController,
+                decoration: const InputDecoration(
+                    labelText: 'Numer KSeF', isDense: true),
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _sellerNipController,
+                      decoration: const InputDecoration(
+                          labelText: 'NIP sprzedawcy', isDense: true),
+                      style: const TextStyle(fontSize: 13),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _buyerNipController,
+                      decoration: const InputDecoration(
+                          labelText: 'NIP nabywcy', isDense: true),
+                      style: const TextStyle(fontSize: 13),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _netAmountController,
+                      decoration: const InputDecoration(
+                          labelText: 'Netto', isDense: true),
+                      style: const TextStyle(fontSize: 13),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _vatAmountController,
+                      decoration: const InputDecoration(
+                          labelText: 'VAT', isDense: true),
+                      style: const TextStyle(fontSize: 13),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _vatRate,
+                decoration: const InputDecoration(
+                    labelText: 'Stawka VAT', isDense: true),
+                items: _vatRates
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) => setState(() => _vatRate = v),
+              ),
+            ],
+
+            // Family sharing
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text('Udostępnij rodzinie',
+                  style: TextStyle(fontSize: 14)),
+              subtitle: const Text('Widoczny dla członków rodziny',
+                  style: TextStyle(fontSize: 12)),
+              value: _sharedWithFamily,
+              onChanged: (v) => setState(() => _sharedWithFamily = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
             ),
           ],
         ),

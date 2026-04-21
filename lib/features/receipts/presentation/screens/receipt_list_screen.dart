@@ -10,7 +10,6 @@ import '../widgets/advanced_filters.dart';
 import '../widgets/receipt_card.dart';
 import '../widgets/receipt_edit_dialog.dart';
 
-/// Provider used to signal receipt list refresh from outside (e.g. after upload)
 final receiptListRefreshProvider = StateProvider<int>((ref) => 0);
 
 class ReceiptListScreen extends ConsumerStatefulWidget {
@@ -29,6 +28,20 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   bool _hasMore = true;
   int _offset = 0;
   static const _pageSize = 20;
+  int _lastRefreshSignal = 0;
+
+  // Sub-tab filter
+  ReceiptFilterType _filterType = ReceiptFilterType.all;
+  Map<ReceiptFilterType, int> _counts = {
+    ReceiptFilterType.all: 0,
+    ReceiptFilterType.receiptsOnly: 0,
+    ReceiptFilterType.ksefOnly: 0,
+  };
+
+  // Sorting
+  String _orderBy = 'uploaded_at';
+  bool _ascending = false;
+  String _sortLabel = 'Data dodania ↓';
 
   // Filters
   String? _category;
@@ -37,12 +50,11 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   double? _amountMin;
   double? _amountMax;
 
-  int _lastRefreshSignal = 0;
-
   @override
   void initState() {
     super.initState();
     _loadReceipts();
+    _loadCounts();
     _scrollController.addListener(_onScroll);
   }
 
@@ -58,6 +70,15 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
         _scrollController.position.maxScrollExtent - 200) {
       _loadMore();
     }
+  }
+
+  Future<void> _loadCounts() async {
+    try {
+      final userId = SupabaseService.auth.currentUser!.id;
+      final counts =
+          await ref.read(receiptRepositoryProvider).getCounts(userId);
+      if (mounted) setState(() => _counts = counts);
+    } catch (_) {}
   }
 
   Future<void> _loadReceipts() async {
@@ -82,6 +103,9 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             dateTo: _dateTo,
             amountMin: _amountMin,
             amountMax: _amountMax,
+            orderBy: _orderBy,
+            ascending: _ascending,
+            filterType: _filterType,
           );
 
       setState(() {
@@ -113,6 +137,9 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             dateTo: _dateTo,
             amountMin: _amountMin,
             amountMax: _amountMax,
+            orderBy: _orderBy,
+            ascending: _ascending,
+            filterType: _filterType,
           );
 
       setState(() {
@@ -131,7 +158,11 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Usuń paragon'),
-        content: const Text('Czy na pewno chcesz usunąć ten paragon?'),
+        content: Text(
+          'Czy na pewno chcesz usunąć ${receipt.isKsefInvoice ? 'fakturę' : 'paragon'}'
+          '${receipt.merchantName != null ? ' z ${receipt.merchantName}' : ''}?'
+          '\n\nTej operacji nie można cofnąć.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -139,9 +170,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Usuń'),
           ),
         ],
@@ -151,27 +180,42 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     if (confirm == true) {
       await ref.read(receiptRepositoryProvider).deleteReceipt(receipt.id);
       _loadReceipts();
+      _loadCounts();
     }
+  }
+
+  void _setSort(String label, String orderBy, bool ascending) {
+    setState(() {
+      _sortLabel = label;
+      _orderBy = orderBy;
+      _ascending = ascending;
+    });
+    _loadReceipts();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen for refresh signal from ReceiptUpload
     final refreshSignal = ref.watch(receiptListRefreshProvider);
     if (refreshSignal != _lastRefreshSignal) {
       _lastRefreshSignal = refreshSignal;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadReceipts());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadReceipts();
+        _loadCounts();
+      });
     }
 
     return RefreshIndicator(
-      onRefresh: () async => _loadReceipts(),
+      onRefresh: () async {
+        await _loadReceipts();
+        await _loadCounts();
+      },
       child: CustomScrollView(
         controller: _scrollController,
         slivers: [
           // Search
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
@@ -191,6 +235,128 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
               ),
             ),
           ),
+
+          // Sub-tabs: Wszystko / Paragony / Faktury KSeF
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _SubTab(
+                            icon: Icons.receipt_long_rounded,
+                            label: 'Wszystko',
+                            count: _counts[ReceiptFilterType.all] ?? 0,
+                            isSelected:
+                                _filterType == ReceiptFilterType.all,
+                            onTap: () {
+                              setState(() =>
+                                  _filterType = ReceiptFilterType.all);
+                              _loadReceipts();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _SubTab(
+                            icon: Icons.receipt_rounded,
+                            label: 'Paragony',
+                            count: _counts[
+                                    ReceiptFilterType.receiptsOnly] ??
+                                0,
+                            isSelected: _filterType ==
+                                ReceiptFilterType.receiptsOnly,
+                            onTap: () {
+                              setState(() => _filterType =
+                                  ReceiptFilterType.receiptsOnly);
+                              _loadReceipts();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _SubTab(
+                            icon: Icons.description_rounded,
+                            label: 'Faktury KSeF',
+                            count:
+                                _counts[ReceiptFilterType.ksefOnly] ?? 0,
+                            isSelected: _filterType ==
+                                ReceiptFilterType.ksefOnly,
+                            onTap: () {
+                              setState(() => _filterType =
+                                  ReceiptFilterType.ksefOnly);
+                              _loadReceipts();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Sorting dropdown
+                  PopupMenuButton<String>(
+                    tooltip: 'Sortowanie',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _sortLabel,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.unfold_more, size: 16),
+                        ],
+                      ),
+                    ),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'date_desc':
+                          _setSort('Data dodania ↓', 'uploaded_at', false);
+                        case 'date_asc':
+                          _setSort('Data dodania ↑', 'uploaded_at', true);
+                        case 'amount_desc':
+                          _setSort('Kwota ↓', 'amount', false);
+                        case 'amount_asc':
+                          _setSort('Kwota ↑', 'amount', true);
+                        case 'merchant_asc':
+                          _setSort('Sklep A-Z', 'merchant_name', true);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                          value: 'date_desc',
+                          child: Text('Data dodania ↓')),
+                      const PopupMenuItem(
+                          value: 'date_asc',
+                          child: Text('Data dodania ↑')),
+                      const PopupMenuItem(
+                          value: 'amount_desc',
+                          child: Text('Kwota ↓')),
+                      const PopupMenuItem(
+                          value: 'amount_asc',
+                          child: Text('Kwota ↑')),
+                      const PopupMenuItem(
+                          value: 'merchant_asc',
+                          child: Text('Sklep A-Z')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // Filters
           SliverToBoxAdapter(
             child: Padding(
@@ -228,18 +394,24 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
               ),
             ),
           ),
+
           // List
           if (_isLoading)
             const SliverFillRemaining(
               child: LoadingSpinner(message: 'Ładowanie paragonów...'),
             )
           else if (_receipts.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: EmptyState(
-                icon: Icons.receipt_long_rounded,
-                title: 'Brak paragonów',
-                subtitle:
-                    'Zrób zdjęcie pierwszego paragonu, aby rozpocząć!',
+                icon: _filterType == ReceiptFilterType.ksefOnly
+                    ? Icons.description_outlined
+                    : Icons.receipt_long_rounded,
+                title: _filterType == ReceiptFilterType.ksefOnly
+                    ? 'Brak faktur KSeF'
+                    : 'Brak paragonów',
+                subtitle: _filterType == ReceiptFilterType.ksefOnly
+                    ? 'Zsynchronizuj faktury w zakładce KSeF'
+                    : 'Zrób zdjęcie pierwszego paragonu, aby rozpocząć!',
               ),
             )
           else
@@ -259,12 +431,12 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                     final receipt = _receipts[index];
                     return ReceiptCard(
                       receipt: receipt,
+                      currentUserId:
+                          SupabaseService.auth.currentUser?.id,
                       onTap: () => _showImagePreview(receipt),
                       onEdit: () => _showEditDialog(receipt),
                       onDelete: () => _deleteReceipt(receipt),
-                      onAddWarranty: () {
-                        // TODO: Navigate to add warranty
-                      },
+                      onAddWarranty: () {},
                     );
                   },
                   childCount: _receipts.length + (_hasMore ? 1 : 0),
@@ -281,7 +453,10 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       context: context,
       builder: (context) => ReceiptEditDialog(
         receipt: receipt,
-        onSaved: () => _loadReceipts(),
+        onSaved: () {
+          _loadReceipts();
+          _loadCounts();
+        },
       ),
     );
   }
@@ -294,42 +469,100 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
         insetPadding: const EdgeInsets.all(16),
         child: Stack(
           children: [
-            // Zdjęcie
             Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: CachedNetworkImage(
-                    imageUrl: receipt.imageUrl,
-                    fit: BoxFit.contain,
-                    placeholder: (_, __) => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey[900],
-                      child: const Center(
-                        child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                child: receipt.imageUrl.isEmpty
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.description_rounded,
+                                size: 64,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Faktura KSeF',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                            if (receipt.ksefNumber != null) ...[
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                receipt.ksefNumber!,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                            if (receipt.merchantName != null)
+                              Text(receipt.merchantName!,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600)),
+                            if (receipt.grossAmount != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                '${receipt.grossAmount!.toStringAsFixed(2)} zł brutto',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary,
+                                ),
+                              ),
+                            ],
+                            if (receipt.netAmount != null &&
+                                receipt.vatAmount != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Netto: ${receipt.netAmount!.toStringAsFixed(2)} zł  |  VAT: ${receipt.vatAmount!.toStringAsFixed(2)} zł',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ],
+                        ),
+                      )
+                    : InteractiveViewer(
+                        minScale: 0.5,
+                        maxScale: 4.0,
+                        child: CachedNetworkImage(
+                          imageUrl: receipt.imageUrl,
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: Colors.grey[900],
+                            child: const Center(
+                              child: Icon(Icons.broken_image,
+                                  size: 64, color: Colors.grey),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
               ),
             ),
-            // Przycisk zamknij
             Positioned(
               top: 8,
               right: 8,
               child: IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                icon:
+                    const Icon(Icons.close, color: Colors.white, size: 28),
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.black54,
                 ),
               ),
             ),
-            // Info na dole
             if (receipt.merchantName != null || receipt.amount != null)
               Positioned(
                 bottom: 0,
@@ -376,6 +609,92 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubTab extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SubTab({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
           ],
         ),
       ),

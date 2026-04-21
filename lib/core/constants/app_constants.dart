@@ -39,33 +39,35 @@ class AppConstants {
   static const String currencySymbol = 'zł';
   static const String currencyCode = 'PLN';
 
-  // Categories
+  // Categories (unified with web version)
   static const List<String> receiptCategories = [
-    'Spożywcze',
-    'Elektronika',
+    'Żywność',
     'Odzież',
+    'Elektronika',
+    'Sport',
+    'Dom i Ogród',
     'Zdrowie',
     'Rozrywka',
     'Transport',
-    'Dom i ogród',
     'Edukacja',
     'Restauracje',
-    'Sport',
+    'Faktury',
     'Inne',
   ];
 
   // Category icons (Material icon names)
   static const Map<String, int> categoryIcons = {
-    'Spożywcze': 0xe57a, // shopping_cart
-    'Elektronika': 0xe1e3, // devices
+    'Żywność': 0xe57a, // shopping_cart
     'Odzież': 0xf04b4, // checkroom
+    'Elektronika': 0xe1e3, // devices
+    'Sport': 0xe2e3, // fitness_center
+    'Dom i Ogród': 0xe318, // home
     'Zdrowie': 0xe4c1, // local_hospital
     'Rozrywka': 0xe40f, // movie
     'Transport': 0xe1d7, // directions_car
-    'Dom i ogród': 0xe318, // home
     'Edukacja': 0xe559, // school
     'Restauracje': 0xe56c, // restaurant
-    'Sport': 0xe2e3, // fitness_center
+    'Faktury': 0xe873, // receipt
     'Inne': 0xe3b0, // label
   };
 }

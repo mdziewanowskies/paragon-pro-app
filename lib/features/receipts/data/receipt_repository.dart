@@ -2,12 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import 'models/receipt_model.dart';
 
+enum ReceiptFilterType { all, receiptsOnly, ksefOnly }
+
 final receiptRepositoryProvider =
     Provider<ReceiptRepository>((ref) => ReceiptRepository());
 
 class ReceiptRepository {
   static const _table = 'receipts';
 
+  /// Filter type for sub-tabs: all, receipts only, KSeF invoices only
   Future<List<ReceiptModel>> getReceipts({
     required String userId,
     int limit = 20,
@@ -20,18 +23,37 @@ class ReceiptRepository {
     double? amountMax,
     String orderBy = 'uploaded_at',
     bool ascending = false,
+    ReceiptFilterType filterType = ReceiptFilterType.all,
+    String? familyId,
   }) async {
-    var query = SupabaseService.client
-        .from(_table)
-        .select()
-        .eq('user_id', userId);
+    // Base query: own receipts + family shared receipts
+    var query = SupabaseService.client.from(_table).select();
+
+    if (familyId != null && familyId.isNotEmpty) {
+      query = query.or(
+          'user_id.eq.$userId,and(shared_with_family.eq.true,family_id.eq.$familyId)');
+    } else {
+      query = query.eq('user_id', userId);
+    }
+
+    // Sub-tab filter
+    switch (filterType) {
+      case ReceiptFilterType.receiptsOnly:
+        query = query.eq('is_ksef_invoice', false);
+        break;
+      case ReceiptFilterType.ksefOnly:
+        query = query.eq('is_ksef_invoice', true);
+        break;
+      case ReceiptFilterType.all:
+        break;
+    }
 
     if (category != null && category.isNotEmpty) {
       query = query.eq('category', category);
     }
     if (search != null && search.isNotEmpty) {
       query = query.or(
-          'merchant_name.ilike.%$search%,receipt_number.ilike.%$search%');
+          'merchant_name.ilike.%$search%,receipt_number.ilike.%$search%,notes.ilike.%$search%');
     }
     if (dateFrom != null) {
       query = query.gte(
@@ -53,6 +75,30 @@ class ReceiptRepository {
         .range(offset, offset + limit - 1);
 
     return (data as List).map((e) => ReceiptModel.fromJson(e)).toList();
+  }
+
+  /// Get counts for sub-tabs (all, receipts, KSeF)
+  Future<Map<ReceiptFilterType, int>> getCounts(String userId,
+      {String? familyId}) async {
+    var query = SupabaseService.client.from(_table).select('id, is_ksef_invoice');
+
+    if (familyId != null && familyId.isNotEmpty) {
+      query = query.or(
+          'user_id.eq.$userId,and(shared_with_family.eq.true,family_id.eq.$familyId)');
+    } else {
+      query = query.eq('user_id', userId);
+    }
+
+    final data = await query;
+    final list = data as List;
+    final ksefCount =
+        list.where((e) => e['is_ksef_invoice'] == true).length;
+
+    return {
+      ReceiptFilterType.all: list.length,
+      ReceiptFilterType.receiptsOnly: list.length - ksefCount,
+      ReceiptFilterType.ksefOnly: ksefCount,
+    };
   }
 
   Future<ReceiptModel> getReceipt(String id) async {

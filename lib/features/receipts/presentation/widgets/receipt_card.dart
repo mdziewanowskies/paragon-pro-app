@@ -6,6 +6,7 @@ import '../../data/models/receipt_model.dart';
 
 class ReceiptCard extends StatelessWidget {
   final ReceiptModel receipt;
+  final String? currentUserId;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -15,12 +16,18 @@ class ReceiptCard extends StatelessWidget {
   const ReceiptCard({
     super.key,
     required this.receipt,
+    this.currentUserId,
     this.onTap,
     this.onEdit,
     this.onDelete,
     this.onAddWarranty,
     this.onComplaint,
   });
+
+  bool get _isFamilyShared =>
+      receipt.sharedWithFamily &&
+      currentUserId != null &&
+      receipt.userId != currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +41,7 @@ class ReceiptCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image
+              // Image or KSeF placeholder
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Stack(
@@ -42,54 +49,57 @@ class ReceiptCard extends StatelessWidget {
                     SizedBox(
                       height: 180,
                       width: double.infinity,
-                      child: CachedNetworkImage(
-                        imageUrl: receipt.imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface,
-                          child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2)),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface,
-                          child: const Icon(Icons.receipt_long,
-                              size: 48, color: Colors.grey),
-                        ),
+                      child: receipt.isKsefInvoice &&
+                              (receipt.imageUrl.isEmpty)
+                          ? _KsefPlaceholder()
+                          : CachedNetworkImage(
+                              imageUrl: receipt.imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(
+                                color: Theme.of(context).colorScheme.surface,
+                                child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              ),
+                              errorWidget: (_, __, ___) => Container(
+                                color: Theme.of(context).colorScheme.surface,
+                                child: const Icon(Icons.receipt_long,
+                                    size: 48, color: Colors.grey),
+                              ),
+                            ),
+                    ),
+                    // Badges row (top right)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (receipt.isKsefInvoice)
+                            _Badge(
+                              icon: Icons.description_rounded,
+                              label: 'FAKTURA',
+                              color: AppColors.lightPrimary,
+                            ),
+                          if (receipt.isKsefInvoice && receipt.aiProcessed)
+                            const SizedBox(width: 4),
+                          if (receipt.aiProcessed)
+                            _Badge(
+                              icon: Icons.auto_awesome,
+                              label: 'AI',
+                              color: AppColors.lightPrimary,
+                            ),
+                          if (_isFamilyShared) ...[
+                            const SizedBox(width: 4),
+                            _Badge(
+                              icon: Icons.family_restroom_rounded,
+                              label: 'Rodzinne',
+                              color: Colors.blue,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (receipt.aiProcessed)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.lightPrimary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.auto_awesome,
-                                  color: Colors.white, size: 14),
-                              SizedBox(width: 4),
-                              Text(
-                                'AI',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -118,11 +128,51 @@ class ReceiptCard extends StatelessWidget {
               Text(
                 Formatters.formatCurrency(receipt.amount),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
+              // KSeF details
+              if (receipt.isKsefInvoice) ...[
+                const SizedBox(height: 6),
+                if (receipt.sellerNip != null)
+                  Row(
+                    children: [
+                      Icon(Icons.badge_outlined,
+                          size: 14,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'NIP: ${receipt.sellerNip}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (receipt.ksefNumber != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    receipt.ksefNumber!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
               const SizedBox(height: 8),
               // Category chip
               if (receipt.category != null)
@@ -177,6 +227,84 @@ class ReceiptCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _Badge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KsefPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.description_rounded,
+              size: 48,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Faktura KSeF',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            Text(
+              'Kliknij, aby pobrać PDF',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
       ),
     );
