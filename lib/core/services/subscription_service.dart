@@ -20,9 +20,13 @@ class SubscriptionInfo {
     required this.currentMonthReceipts,
   });
 
-  bool get canUpload => currentMonthReceipts < maxReceiptsPerMonth;
-  double get usagePercentage =>
-      maxReceiptsPerMonth > 0 ? currentMonthReceipts / maxReceiptsPerMonth : 0;
+  // -1 means unlimited
+  bool get canUpload =>
+      maxReceiptsPerMonth < 0 || currentMonthReceipts < maxReceiptsPerMonth;
+  bool get isUnlimited => maxReceiptsPerMonth < 0;
+  double get usagePercentage => maxReceiptsPerMonth > 0
+      ? currentMonthReceipts / maxReceiptsPerMonth
+      : 0;
   bool get isFree => tier == 'free';
   bool get isPremium => tier == 'premium' || tier == 'family';
 

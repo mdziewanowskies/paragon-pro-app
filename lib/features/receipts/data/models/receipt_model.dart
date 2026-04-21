@@ -122,6 +122,12 @@ class ReceiptModel {
         'family_id': familyId,
       };
 
+  bool get hasValidImageUrl =>
+      imageUrl.isNotEmpty &&
+      (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
+
+  bool get isKsefWithoutImage => isKsefInvoice && !hasValidImageUrl;
+
   ReceiptModel copyWith({
     double? amount,
     String? merchantName,

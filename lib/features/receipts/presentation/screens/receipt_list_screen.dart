@@ -512,7 +512,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
 
   void _showImagePreview(ReceiptModel receipt) {
     // KSeF invoices without image → rich invoice preview
-    if (receipt.isKsefInvoice && receipt.imageUrl.isEmpty) {
+    if (receipt.isKsefWithoutImage) {
       showDialog(
         context: context,
         builder: (context) => KsefInvoicePreviewDialog(receipt: receipt),
@@ -530,7 +530,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: receipt.imageUrl.isEmpty
+                child: !receipt.hasValidImageUrl
                     ? Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(32),

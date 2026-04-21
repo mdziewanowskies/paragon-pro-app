@@ -49,8 +49,7 @@ class ReceiptCard extends StatelessWidget {
                     SizedBox(
                       height: 180,
                       width: double.infinity,
-                      child: receipt.isKsefInvoice &&
-                              (receipt.imageUrl.isEmpty)
+                      child: receipt.isKsefWithoutImage
                           ? _KsefPlaceholder()
                           : CachedNetworkImage(
                               imageUrl: receipt.imageUrl,

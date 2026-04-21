@@ -252,7 +252,7 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
   }
 
   void _showPreview(ReceiptModel receipt) {
-    if (receipt.isKsefInvoice && receipt.imageUrl.isEmpty) {
+    if (!receipt.hasValidImageUrl) {
       showDialog(
         context: context,
         builder: (context) => KsefInvoicePreviewDialog(receipt: receipt),
@@ -316,7 +316,7 @@ class _GridCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  receipt.isKsefInvoice && receipt.imageUrl.isEmpty
+                  !receipt.hasValidImageUrl
                       ? Container(
                           color: Theme.of(context)
                               .colorScheme

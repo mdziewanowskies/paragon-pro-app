@@ -199,6 +199,7 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
     final sub = ref.watch(subscriptionProvider).value;
     final usedCount = sub?.currentMonthReceipts ?? 0;
     final maxCount = sub?.maxReceiptsPerMonth ?? 10;
+    final isUnlimited = sub?.isUnlimited ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,7 +218,9 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '$usedCount / $maxCount w tym miesiącu',
+                isUnlimited
+                    ? '$usedCount w tym miesiącu (∞)'
+                    : '$usedCount / $maxCount w tym miesiącu',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
