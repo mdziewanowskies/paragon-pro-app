@@ -21,7 +21,7 @@ class ComplaintLetterDialog extends ConsumerStatefulWidget {
 
 class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
   int _step = 0; // 0: form, 1: generating, 2: preview
-  String _generatedLetter = '';
+  final _letterController = TextEditingController();
 
   // Form controllers
   final _merchantAddressController = TextEditingController();
@@ -48,6 +48,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
     _productNameController.dispose();
     _reasonController.dispose();
     _cityController.dispose();
+    _letterController.dispose();
     super.dispose();
   }
 
@@ -120,7 +121,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
 
       if (mounted) {
         setState(() {
-          _generatedLetter = letter;
+          _letterController.text = letter;
           _step = 2;
         });
       }
@@ -135,7 +136,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
   }
 
   Future<void> _copyToClipboard() async {
-    await Clipboard.setData(ClipboardData(text: _generatedLetter));
+    await Clipboard.setData(ClipboardData(text: _letterController.text));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tekst skopiowany do schowka')),
@@ -150,7 +151,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
 
     final pdf = pw.Document();
 
-    final paragraphs = _generatedLetter
+    final paragraphs = _letterController.text
         .split('\n')
         .where((l) => l.trim().isNotEmpty)
         .toList();
@@ -524,36 +525,57 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
       children: [
         Row(
           children: [
-            Icon(Icons.check_circle,
-                color: Colors.green, size: 20),
+            const Icon(Icons.check_circle, color: Colors.green, size: 20),
             const SizedBox(width: 8),
             const Text(
               'Pismo wygenerowane',
               style: TextStyle(
                   fontWeight: FontWeight.w600, color: Colors.green),
             ),
+            const Spacer(),
+            Icon(Icons.edit_note_rounded,
+                size: 18,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5)),
+            const SizedBox(width: 4),
+            Text(
+              'Edytowalne',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        TextField(
+          controller: _letterController,
+          maxLines: null,
+          minLines: 12,
+          style: const TextStyle(fontSize: 13, height: 1.6),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
+              ),
             ),
-          ),
-          child: SelectableText(
-            _generatedLetter,
-            style: const TextStyle(fontSize: 13, height: 1.6),
+            contentPadding: const EdgeInsets.all(16),
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Możesz skopiować tekst i wkleić do dokumentu lub wysłać emailem.',
+          'Możesz edytować treść pisma przed pobraniem PDF.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context)
                     .colorScheme
