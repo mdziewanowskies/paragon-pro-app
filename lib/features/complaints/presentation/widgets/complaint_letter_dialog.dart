@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
@@ -140,6 +143,85 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
     }
   }
 
+  Future<void> _generateAndSharePdf() async {
+    final profile = ref.read(profileProvider).value;
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+
+    final pdf = pw.Document();
+
+    final paragraphs = _generatedLetter
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(50),
+        build: (context) => [
+          // Header
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'PISMO REKLAMACYJNE',
+                style: pw.TextStyle(font: fontBold, fontSize: 16),
+              ),
+              pw.Text(
+                Formatters.formatDate(DateTime.now()),
+                style: pw.TextStyle(font: font, fontSize: 10),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          pw.Divider(thickness: 1.5),
+          pw.SizedBox(height: 16),
+          // Letter content
+          ...paragraphs.map((p) {
+            final isBold = p.trim().endsWith(':') ||
+                p.toUpperCase() == p && p.length > 3;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 6),
+              child: pw.Text(
+                p,
+                style: pw.TextStyle(
+                  font: isBold ? fontBold : font,
+                  fontSize: 11,
+                  lineSpacing: 4,
+                ),
+              ),
+            );
+          }),
+          // Signature area
+          pw.SizedBox(height: 40),
+          pw.Divider(thickness: 0.5),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            profile?.fullName ?? '',
+            style: pw.TextStyle(font: font, fontSize: 10),
+          ),
+        ],
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Wygenerowano w ParagonPro • Strona ${context.pageNumber}/${context.pagesCount}',
+            style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey),
+          ),
+        ),
+      ),
+    );
+
+    final merchantName = widget.receipt.merchantName
+            ?.replaceAll(RegExp(r'[^\w\s]'), '')
+            .replaceAll(' ', '_') ??
+        'reklamacja';
+    final fileName =
+        'reklamacja_${merchantName}_${DateTime.now().millisecondsSinceEpoch}';
+
+    await Printing.sharePdf(bytes: await pdf.save(), filename: '$fileName.pdf');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -222,6 +304,13 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
                         onPressed: _copyToClipboard,
                         icon: const Icon(Icons.copy, size: 18),
                         label: const Text('Kopiuj'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: _generateAndSharePdf,
+                        icon: const Icon(Icons.picture_as_pdf_rounded,
+                            size: 18),
+                        label: const Text('Pobierz PDF'),
                       ),
                     ],
                   ],
