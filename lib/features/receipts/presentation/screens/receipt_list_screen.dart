@@ -236,120 +236,137 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             ),
           ),
 
-          // Sub-tabs: Wszystko / Paragony / Faktury KSeF
+          // Sub-tabs + Sorting — two separate rows
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _SubTab(
-                            icon: Icons.receipt_long_rounded,
-                            label: 'Wszystko',
-                            count: _counts[ReceiptFilterType.all] ?? 0,
-                            isSelected:
-                                _filterType == ReceiptFilterType.all,
-                            onTap: () {
-                              setState(() =>
-                                  _filterType = ReceiptFilterType.all);
-                              _loadReceipts();
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _SubTab(
-                            icon: Icons.receipt_rounded,
-                            label: 'Paragony',
-                            count: _counts[
-                                    ReceiptFilterType.receiptsOnly] ??
-                                0,
-                            isSelected: _filterType ==
-                                ReceiptFilterType.receiptsOnly,
-                            onTap: () {
-                              setState(() => _filterType =
-                                  ReceiptFilterType.receiptsOnly);
-                              _loadReceipts();
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _SubTab(
-                            icon: Icons.description_rounded,
-                            label: 'Faktury KSeF',
-                            count:
-                                _counts[ReceiptFilterType.ksefOnly] ?? 0,
-                            isSelected: _filterType ==
-                                ReceiptFilterType.ksefOnly,
-                            onTap: () {
-                              setState(() => _filterType =
-                                  ReceiptFilterType.ksefOnly);
-                              _loadReceipts();
-                            },
-                          ),
-                        ],
-                      ),
+                  // Row 1: Sub-tabs
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _SubTab(
+                          icon: Icons.receipt_long_rounded,
+                          label: 'Wszystko',
+                          count: _counts[ReceiptFilterType.all] ?? 0,
+                          isSelected:
+                              _filterType == ReceiptFilterType.all,
+                          onTap: () {
+                            setState(() =>
+                                _filterType = ReceiptFilterType.all);
+                            _loadReceipts();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _SubTab(
+                          icon: Icons.receipt_rounded,
+                          label: 'Paragony',
+                          count: _counts[
+                                  ReceiptFilterType.receiptsOnly] ??
+                              0,
+                          isSelected: _filterType ==
+                              ReceiptFilterType.receiptsOnly,
+                          onTap: () {
+                            setState(() => _filterType =
+                                ReceiptFilterType.receiptsOnly);
+                            _loadReceipts();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _SubTab(
+                          icon: Icons.description_rounded,
+                          label: 'Faktury KSeF',
+                          count:
+                              _counts[ReceiptFilterType.ksefOnly] ?? 0,
+                          isSelected: _filterType ==
+                              ReceiptFilterType.ksefOnly,
+                          onTap: () {
+                            setState(() => _filterType =
+                                ReceiptFilterType.ksefOnly);
+                            _loadReceipts();
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  // Sorting dropdown
-                  PopupMenuButton<String>(
-                    tooltip: 'Sortowanie',
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
+                  // Row 2: Sorting
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text(
+                        'Sortuj:',
+                        style: TextStyle(
+                          fontSize: 13,
                           color: Theme.of(context)
                               .colorScheme
-                              .outline
-                              .withValues(alpha: 0.3),
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _sortLabel,
-                            style: const TextStyle(fontSize: 12),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<String>(
+                        tooltip: 'Sortowanie',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.3),
+                            ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.unfold_more, size: 16),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _sortLabel,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.unfold_more, size: 16),
+                            ],
+                          ),
+                        ),
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'date_desc':
+                              _setSort('Data dodania ↓', 'uploaded_at', false);
+                            case 'date_asc':
+                              _setSort('Data dodania ↑', 'uploaded_at', true);
+                            case 'amount_desc':
+                              _setSort('Kwota ↓', 'amount', false);
+                            case 'amount_asc':
+                              _setSort('Kwota ↑', 'amount', true);
+                            case 'merchant_asc':
+                              _setSort('Sklep A-Z', 'merchant_name', true);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                              value: 'date_desc',
+                              child: Text('Data dodania ↓')),
+                          const PopupMenuItem(
+                              value: 'date_asc',
+                              child: Text('Data dodania ↑')),
+                          const PopupMenuItem(
+                              value: 'amount_desc',
+                              child: Text('Kwota ↓')),
+                          const PopupMenuItem(
+                              value: 'amount_asc',
+                              child: Text('Kwota ↑')),
+                          const PopupMenuItem(
+                              value: 'merchant_asc',
+                              child: Text('Sklep A-Z')),
                         ],
                       ),
-                    ),
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'date_desc':
-                          _setSort('Data dodania ↓', 'uploaded_at', false);
-                        case 'date_asc':
-                          _setSort('Data dodania ↑', 'uploaded_at', true);
-                        case 'amount_desc':
-                          _setSort('Kwota ↓', 'amount', false);
-                        case 'amount_asc':
-                          _setSort('Kwota ↑', 'amount', true);
-                        case 'merchant_asc':
-                          _setSort('Sklep A-Z', 'merchant_name', true);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                          value: 'date_desc',
-                          child: Text('Data dodania ↓')),
-                      const PopupMenuItem(
-                          value: 'date_asc',
-                          child: Text('Data dodania ↑')),
-                      const PopupMenuItem(
-                          value: 'amount_desc',
-                          child: Text('Kwota ↓')),
-                      const PopupMenuItem(
-                          value: 'amount_asc',
-                          child: Text('Kwota ↑')),
-                      const PopupMenuItem(
-                          value: 'merchant_asc',
-                          child: Text('Sklep A-Z')),
                     ],
                   ),
                 ],
@@ -360,7 +377,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
           // Filters
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: AdvancedFilters(
                 selectedCategory: _category,
                 dateFrom: _dateFrom,
