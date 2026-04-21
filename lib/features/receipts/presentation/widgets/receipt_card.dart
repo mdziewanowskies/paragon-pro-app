@@ -294,7 +294,7 @@ class _KsefPlaceholder extends StatelessWidget {
               ),
             ),
             Text(
-              'Kliknij, aby pobrać PDF',
+              'Kliknij, aby wyświetlić zawartość',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context)
