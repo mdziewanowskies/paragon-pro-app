@@ -13,7 +13,6 @@ final bestAchievementProvider =
     final list = userAchievements as List;
     if (list.isEmpty) return null;
 
-    // Find the one with highest points
     Map<String, dynamic>? best;
     int bestPoints = -1;
     for (final ua in list) {
@@ -29,5 +28,29 @@ final bestAchievementProvider =
     return best;
   } catch (_) {
     return null;
+  }
+});
+
+final userAchievementsProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, userId) async {
+  try {
+    final data = await SupabaseService.client
+        .from('user_achievements')
+        .select('achievement_id, unlocked_at, achievements(name, icon, points)')
+        .eq('user_id', userId)
+        .order('unlocked_at', ascending: false);
+
+    return (data as List).map((ua) {
+      final a = ua['achievements'] as Map<String, dynamic>? ?? {};
+      return <String, dynamic>{
+        'name': a['name'],
+        'icon': a['icon'],
+        'points': a['points'],
+        'unlocked_at': ua['unlocked_at'],
+      };
+    }).toList();
+  } catch (_) {
+    return [];
   }
 });

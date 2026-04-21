@@ -62,6 +62,10 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
     final members = widget.familyData['members'] as List? ?? [];
     final role = widget.familyData['role'] as String? ?? 'member';
     final isAdmin = role == 'admin';
+    final memberIds = members
+        .map((m) => m['user_id'] as String? ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,75 +126,23 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
           ),
         ),
         const SizedBox(height: 16),
-        // Members list
-        Text(
-          'Członkowie',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        ...members.map((m) {
-          final profile = m['profiles'] as Map<String, dynamic>?;
-          final memberRole = m['role'] as String? ?? 'member';
-          final memberId = m['user_id'] as String? ?? '';
-          final bestAchievement = ref.watch(bestAchievementProvider(memberId));
 
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-              child: Text(
-                (profile?['first_name'] as String? ??
-                        profile?['username'] as String? ??
-                        '?')
-                    .characters
-                    .first
-                    .toUpperCase(),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            title: Text(
-              profile?['username'] as String? ??
-                  '${profile?['first_name'] ?? ''} ${profile?['last_name'] ?? ''}'
-                      .trim(),
-            ),
-            subtitle: bestAchievement.when(
-              data: (a) => a != null
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          a['icon'] as String? ?? '\u{1F3C6}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          a['name'] as String? ?? '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    )
-                  : null,
-              loading: () => null,
-              error: (_, __) => null,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (memberRole == 'admin')
-                  const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
-              ],
-            ),
-          );
-        }),
+        // Members list with achievements
+        Text('Członkowie', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        ...members.map((m) => _MemberTile(
+              member: m,
+              ref: ref,
+              context: context,
+            )),
+
+        // Family achievements summary
+        const SizedBox(height: 20),
+        _FamilyAchievementsSummary(memberIds: memberIds, ref: ref),
+
         // Invite section
         if (isAdmin) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
             'Zaproś do rodziny',
             style: Theme.of(context).textTheme.titleMedium,
@@ -218,4 +170,366 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
       ],
     );
   }
+}
+
+class _MemberTile extends StatelessWidget {
+  final dynamic member;
+  final WidgetRef ref;
+  final BuildContext context;
+
+  const _MemberTile({
+    required this.member,
+    required this.ref,
+    required this.context,
+  });
+
+  @override
+  Widget build(BuildContext outerContext) {
+    final profile = member['profiles'] as Map<String, dynamic>?;
+    final memberRole = member['role'] as String? ?? 'member';
+    final memberId = member['user_id'] as String? ?? '';
+    final achievements = ref.watch(userAchievementsProvider(memberId));
+
+    final displayName = profile?['username'] as String? ??
+        '${profile?['first_name'] ?? ''} ${profile?['last_name'] ?? ''}'
+            .trim();
+    final initial = (profile?['first_name'] as String? ??
+            profile?['username'] as String? ??
+            '?')
+        .characters
+        .first
+        .toUpperCase();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Member header
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(outerContext)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.2),
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      color: Theme.of(outerContext).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName.isEmpty ? 'Użytkownik' : displayName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (memberRole == 'admin')
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                color: Colors.amber, size: 14),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Admin',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.amber.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Achievement badges
+            achievements.when(
+              data: (list) {
+                if (list.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: list.map((a) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(outerContext)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Theme.of(outerContext)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              a['icon'] as String? ?? '\u{1F3C6}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              a['name'] as String? ?? '',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(outerContext)
+                                    .colorScheme
+                                    .primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FamilyAchievementsSummary extends StatelessWidget {
+  final List<String> memberIds;
+  final WidgetRef ref;
+
+  const _FamilyAchievementsSummary({
+    required this.memberIds,
+    required this.ref,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Collect all achievements from all members
+    final Map<String, _AchievementStat> achievementMap = {};
+    int totalAchievements = 0;
+
+    for (final memberId in memberIds) {
+      final achievements = ref.watch(userAchievementsProvider(memberId));
+      achievements.whenData((list) {
+        totalAchievements += list.length;
+        for (final a in list) {
+          final name = a['name'] as String? ?? '';
+          final icon = a['icon'] as String? ?? '\u{1F3C6}';
+          if (name.isNotEmpty) {
+            achievementMap[name] = _AchievementStat(
+              name: name,
+              icon: icon,
+              count: (achievementMap[name]?.count ?? 0) + 1,
+              points: a['points'] as int? ?? 0,
+            );
+          }
+        }
+      });
+    }
+
+    if (achievementMap.isEmpty) return const SizedBox.shrink();
+
+    final sortedAchievements = achievementMap.values.toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+
+    final totalPoints = sortedAchievements.fold<int>(
+        0, (sum, a) => sum + (a.points * a.count));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.emoji_events_rounded,
+                    color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Osiągnięcia rodziny',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Summary stats
+            Row(
+              children: [
+                _SummaryChip(
+                  icon: Icons.emoji_events_rounded,
+                  value: '$totalAchievements',
+                  label: 'Łącznie',
+                  context: context,
+                ),
+                const SizedBox(width: 12),
+                _SummaryChip(
+                  icon: Icons.star_rounded,
+                  value: '${sortedAchievements.length}',
+                  label: 'Unikalnych',
+                  context: context,
+                ),
+                const SizedBox(width: 12),
+                _SummaryChip(
+                  icon: Icons.bolt_rounded,
+                  value: '$totalPoints',
+                  label: 'Punktów',
+                  context: context,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Achievement list
+            ...sortedAchievements.map((a) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Text(a.icon, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              a.name,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${a.points} pkt',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (a.count > 1)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '×${a.count}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final BuildContext context;
+
+  const _SummaryChip({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.context,
+  });
+
+  @override
+  Widget build(BuildContext outerContext) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context)
+              .colorScheme
+              .primary
+              .withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Icon(icon,
+                size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AchievementStat {
+  final String name;
+  final String icon;
+  final int count;
+  final int points;
+
+  _AchievementStat({
+    required this.name,
+    required this.icon,
+    required this.count,
+    required this.points,
+  });
 }
