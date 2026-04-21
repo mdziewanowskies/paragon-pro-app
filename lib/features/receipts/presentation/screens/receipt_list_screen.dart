@@ -9,6 +9,8 @@ import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
 import '../widgets/receipt_card.dart';
 import '../widgets/receipt_edit_dialog.dart';
+import '../../../warranties/presentation/widgets/warranty_dialog.dart';
+import '../../../complaints/presentation/widgets/complaint_letter_dialog.dart';
 
 final receiptListRefreshProvider = StateProvider<int>((ref) => 0);
 
@@ -453,7 +455,8 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       onTap: () => _showImagePreview(receipt),
                       onEdit: () => _showEditDialog(receipt),
                       onDelete: () => _deleteReceipt(receipt),
-                      onAddWarranty: () {},
+                      onAddWarranty: () => _showWarrantyDialog(receipt),
+                      onComplaint: () => _showComplaintDialog(receipt),
                     );
                   },
                   childCount: _receipts.length + (_hasMore ? 1 : 0),
@@ -462,6 +465,23 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  void _showWarrantyDialog(ReceiptModel receipt) {
+    showDialog(
+      context: context,
+      builder: (context) => WarrantyDialog(
+        receipt: receipt,
+        onSaved: () => _loadReceipts(),
+      ),
+    );
+  }
+
+  void _showComplaintDialog(ReceiptModel receipt) {
+    showDialog(
+      context: context,
+      builder: (context) => ComplaintLetterDialog(receipt: receipt),
     );
   }
 
