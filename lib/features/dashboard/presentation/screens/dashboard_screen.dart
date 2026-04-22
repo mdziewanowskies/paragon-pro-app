@@ -20,6 +20,7 @@ import '../../../gamification/presentation/screens/gamification_screen.dart';
 import '../../../family/presentation/screens/family_screen.dart';
 import '../../../ksef/presentation/screens/ksef_panel_screen.dart';
 import '../../../reports/presentation/screens/reports_screen.dart';
+import '../../../stores/presentation/screens/stores_screen.dart';
 
 // Dashboard data providers
 final dashboardStatsProvider =
@@ -105,6 +106,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   late TabController _tabController;
 
   final _tabs = const [
+    Tab(icon: Icon(Icons.store_rounded), text: 'Sklepy'),
     Tab(icon: Icon(Icons.receipt_long_rounded), text: 'Paragony'),
     Tab(icon: Icon(Icons.description_rounded), text: 'KSeF'),
     Tab(icon: Icon(Icons.shield_rounded), text: 'Gwarancje'),
@@ -264,6 +266,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         body: TabBarView(
           controller: _tabController,
           children: const [
+            StoresScreen(),
             ReceiptListScreen(),
             KsefPanelScreen(),
             WarrantyListScreen(),
