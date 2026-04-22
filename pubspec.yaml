@@ -54,6 +54,10 @@ dependencies:
   # PDF
   pdf: ^3.11.2
 
+dependency_overrides:
+  # Pin to version that doesn't use objective_c FFI (fixes iOS 26 simulator crash)
+  path_provider_foundation: 2.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
