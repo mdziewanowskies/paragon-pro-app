@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../widgets/ksef_invoice_preview.dart';
+import '../widgets/receipt_grid_card.dart';
 import '../../../../core/services/supabase_service.dart';
-import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
 import '../../data/models/receipt_model.dart';
@@ -224,7 +223,7 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final r = _receipts[index];
-                      return _GridCard(
+                      return ReceiptGridCard(
                         receipt: r,
                         onTap: () => _showPreview(r),
                       );
@@ -292,120 +291,5 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
         ),
       );
     }
-  }
-}
-
-class _GridCard extends StatelessWidget {
-  final ReceiptModel receipt;
-  final VoidCallback? onTap;
-
-  const _GridCard({required this.receipt, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            Expanded(
-              flex: 3,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  !receipt.hasValidImageUrl
-                      ? Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.1),
-                          child: Center(
-                            child: Icon(Icons.description_rounded,
-                                size: 36,
-                                color: Theme.of(context).colorScheme.primary),
-                          ),
-                        )
-                      : CachedNetworkImage(
-                          imageUrl: receipt.imageUrl,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey[800],
-                            child: const Icon(Icons.receipt_long,
-                                size: 32, color: Colors.grey),
-                          ),
-                        ),
-                  // Badge
-                  if (receipt.isKsefInvoice || receipt.aiProcessed)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.lightPrimary,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          receipt.isKsefInvoice ? 'KSeF' : 'AI',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // Info
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      receipt.merchantName ?? 'Nieznany',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (receipt.purchaseDate != null)
-                      Text(
-                        Formatters.formatDate(receipt.purchaseDate),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5),
-                        ),
-                      ),
-                    const Spacer(),
-                    Text(
-                      Formatters.formatCurrency(receipt.amount),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
