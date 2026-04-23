@@ -18,16 +18,18 @@ final monthlyReportProvider =
 
   final thisMonthReceipts = await repo.getReceipts(
     userId: userId,
-    limit: 1000,
+    limit: 10000,
     dateFrom: thisMonth,
     dateTo: now,
+    filterType: ReceiptFilterType.receiptsOnly,
   );
 
   final lastMonthReceipts = await repo.getReceipts(
     userId: userId,
-    limit: 1000,
+    limit: 10000,
     dateFrom: lastMonth,
     dateTo: thisMonth.subtract(const Duration(days: 1)),
+    filterType: ReceiptFilterType.receiptsOnly,
   );
 
   final thisTotal = thisMonthReceipts.fold<double>(

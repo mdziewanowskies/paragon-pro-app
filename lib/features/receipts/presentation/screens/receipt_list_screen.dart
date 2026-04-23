@@ -31,7 +31,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _offset = 0;
-  static const _pageSize = 20;
+  static const _pageSize = 15;
   int _lastRefreshSignal = 0;
 
   // Sub-tab filter
@@ -41,6 +41,9 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     ReceiptFilterType.receiptsOnly: 0,
     ReceiptFilterType.ksefOnly: 0,
   };
+
+  // Family filter
+  bool _showFamilyReceipts = false;
 
   // Sorting
   String _orderBy = 'uploaded_at';
@@ -54,9 +57,12 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   double? _amountMin;
   double? _amountMax;
 
+  String? _familyId;
+
   @override
   void initState() {
     super.initState();
+    _loadFamilyId();
     _loadReceipts();
     _loadCounts();
     _scrollController.addListener(_onScroll);
@@ -69,6 +75,20 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     super.dispose();
   }
 
+  Future<void> _loadFamilyId() async {
+    try {
+      final userId = SupabaseService.auth.currentUser!.id;
+      final membership = await SupabaseService.client
+          .from('family_members')
+          .select('family_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (mounted && membership != null) {
+        setState(() => _familyId = membership['family_id'] as String?);
+      }
+    } catch (_) {}
+  }
+
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
@@ -79,8 +99,10 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   Future<void> _loadCounts() async {
     try {
       final userId = SupabaseService.auth.currentUser!.id;
-      final counts =
-          await ref.read(receiptRepositoryProvider).getCounts(userId);
+      final counts = await ref.read(receiptRepositoryProvider).getCounts(
+            userId,
+            familyId: _showFamilyReceipts ? _familyId : null,
+          );
       if (mounted) setState(() => _counts = counts);
     } catch (_) {}
   }
@@ -100,6 +122,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             limit: _pageSize,
             offset: 0,
             category: _category,
+            familyId: _showFamilyReceipts ? _familyId : null,
             search: _searchController.text.isEmpty
                 ? null
                 : _searchController.text,
@@ -134,6 +157,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             limit: _pageSize,
             offset: _offset,
             category: _category,
+            familyId: _showFamilyReceipts ? _familyId : null,
             search: _searchController.text.isEmpty
                 ? null
                 : _searchController.text,
@@ -295,10 +319,70 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       ],
                     ),
                   ),
-                  // Row 2: Sorting + Zobacz wszystkie
+                  // Row 2: Family toggle + Sorting + Zobacz wszystkie
                   const SizedBox(height: 10),
                   Row(
                     children: [
+                      // Family toggle
+                      if (_familyId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() => _showFamilyReceipts =
+                                  !_showFamilyReceipts);
+                              _loadReceipts();
+                              _loadCounts();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _showFamilyReceipts
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .surface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: _showFamilyReceipts
+                                    ? null
+                                    : Border.all(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline
+                                            .withValues(alpha: 0.3),
+                                      ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.family_restroom_rounded,
+                                    size: 14,
+                                    color: _showFamilyReceipts
+                                        ? Colors.white
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Rodzinne',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _showFamilyReceipts
+                                          ? Colors.white
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       Text(
                         'Sortuj:',
                         style: TextStyle(

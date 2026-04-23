@@ -183,6 +183,7 @@ class ReceiptRepository {
         .from(_table)
         .select('category, amount')
         .eq('user_id', userId)
+        .eq('is_ksef_invoice', false)
         .not('amount', 'is', null);
 
     final Map<String, double> result = {};
@@ -200,6 +201,7 @@ class ReceiptRepository {
         .from(_table)
         .select('purchase_date, amount')
         .eq('user_id', userId)
+        .eq('is_ksef_invoice', false)
         .not('amount', 'is', null)
         .order('purchase_date');
 

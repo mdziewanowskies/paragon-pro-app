@@ -30,8 +30,12 @@ final dashboardStatsProvider =
 
   final repo = ref.read(receiptRepositoryProvider);
 
-  // Get all receipts for stats
-  final receipts = await repo.getReceipts(userId: userId, limit: 1000);
+  // Get only regular receipts for stats (exclude KSeF invoices)
+  final receipts = await repo.getReceipts(
+    userId: userId,
+    limit: 10000,
+    filterType: ReceiptFilterType.receiptsOnly,
+  );
 
   double total = 0;
   Map<String, double> catExpenses = {};
