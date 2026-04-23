@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F9663"/>
+      <stop offset="100%" stop-color="#176B47"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square (iOS/Android adaptive icon friendly) -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bgGrad)"/>
+
+  <!-- Logo centered - receipt with P -->
+  <g transform="translate(280, 240) scale(2.15)">
+    <path fill="#FFFFFF" fill-rule="evenodd" d="
+      M 22 22
+      L 164 22
+      C 204 22, 224 48, 224 82
+      C 224 116, 204 142, 164 142
+      L 150 142
+      L 150 250
+      L 134 238
+      L 118 252
+      L 102 238
+      L 86 252
+      L 70 238
+      L 54 252
+      L 38 238
+      L 22 252
+      Z
+      M 50 52
+      L 122 52
+      L 122 206
+      L 110 196
+      L 96 208
+      L 82 196
+      L 68 208
+      L 56 196
+      L 50 202
+      Z
+      M 150 52
+      L 150 112
+      L 164 112
+      C 186 112, 200 100, 200 82
+      C 200 64, 186 52, 164 52
+      Z
+    "/>
+    <rect x="62" y="82" width="52" height="7" rx="3.5" fill="#C7F5E4" opacity="0.85"/>
+    <rect x="62" y="100" width="52" height="7" rx="3.5" fill="#C7F5E4" opacity="0.85"/>
+    <rect x="62" y="118" width="36" height="7" rx="3.5" fill="#C7F5E4" opacity="0.85"/>
+  </g>
+</svg>
