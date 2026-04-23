@@ -636,8 +636,8 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   }
 
   void _showImagePreview(ReceiptModel receipt) {
-    // KSeF invoices without image → rich invoice preview
-    if (receipt.isKsefWithoutImage) {
+    // No valid image → show rich data preview
+    if (!receipt.hasValidImageUrl) {
       showDialog(
         context: context,
         builder: (context) => KsefInvoicePreviewDialog(receipt: receipt),
@@ -655,83 +655,24 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: !receipt.hasValidImageUrl
-                    ? Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(32),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.description_rounded,
-                                size: 64,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Faktura KSeF',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                            if (receipt.ksefNumber != null) ...[
-                              const SizedBox(height: 8),
-                              SelectableText(
-                                receipt.ksefNumber!,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            if (receipt.merchantName != null)
-                              Text(receipt.merchantName!,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
-                            if (receipt.grossAmount != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                '${receipt.grossAmount!.toStringAsFixed(2)} zł brutto',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary,
-                                ),
-                              ),
-                            ],
-                            if (receipt.netAmount != null &&
-                                receipt.vatAmount != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Netto: ${receipt.netAmount!.toStringAsFixed(2)} zł  |  VAT: ${receipt.vatAmount!.toStringAsFixed(2)} zł',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ],
-                          ],
-                        ),
-                      )
-                    : InteractiveViewer(
-                        minScale: 0.5,
-                        maxScale: 4.0,
-                        child: CachedNetworkImage(
-                          imageUrl: receipt.imageUrl,
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey[900],
-                            child: const Center(
-                              child: Icon(Icons.broken_image,
-                                  size: 64, color: Colors.grey),
-                            ),
-                          ),
-                        ),
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: CachedNetworkImage(
+                    imageUrl: receipt.imageUrl,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: Colors.grey[900],
+                      child: const Center(
+                        child: Icon(Icons.broken_image,
+                            size: 64, color: Colors.grey),
                       ),
+                    ),
+                  ),
+                ),
               ),
             ),
             Positioned(
