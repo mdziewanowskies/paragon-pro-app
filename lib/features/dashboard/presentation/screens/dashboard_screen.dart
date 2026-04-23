@@ -52,8 +52,12 @@ final dashboardStatsProvider =
   final avg = receipts.isNotEmpty ? total / receipts.length : 0.0;
 
   String topCategory = '-';
-  if (catExpenses.isNotEmpty) {
-    topCategory = catExpenses.entries
+  // Exclude "Faktury" from top category — we only want receipt categories
+  final receiptCategories = Map.of(catExpenses)
+    ..remove('Faktury')
+    ..remove('Faktura KSeF');
+  if (receiptCategories.isNotEmpty) {
+    topCategory = receiptCategories.entries
         .reduce((a, b) => a.value >= b.value ? a : b)
         .key;
   }

@@ -48,7 +48,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   // Sorting
   String _orderBy = 'uploaded_at';
   bool _ascending = false;
-  String _sortLabel = 'Data dodania ↓';
+  String _sortLabel = 'Data ↓';
 
   // Filters
   String? _category;
@@ -319,153 +319,170 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       ],
                     ),
                   ),
-                  // Row 2: Family toggle + Sorting + Zobacz wszystkie
+                  // Row 2: Family toggle + Sorting + Grid view
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      // Family toggle
-                      if (_familyId != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() => _showFamilyReceipts =
-                                  !_showFamilyReceipts);
-                              _loadReceipts();
-                              _loadCounts();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: _showFamilyReceipts
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .surface,
-                                borderRadius: BorderRadius.circular(8),
-                                border: _showFamilyReceipts
-                                    ? null
-                                    : Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline
-                                            .withValues(alpha: 0.3),
-                                      ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.family_restroom_rounded,
-                                    size: 14,
-                                    color: _showFamilyReceipts
-                                        ? Colors.white
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Rodzinne',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        // Family toggle
+                        if (_familyId != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _showFamilyReceipts =
+                                    !_showFamilyReceipts);
+                                _loadReceipts();
+                                _loadCounts();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _showFamilyReceipts
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: _showFamilyReceipts
+                                      ? null
+                                      : Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.family_restroom_rounded,
+                                      size: 14,
                                       color: _showFamilyReceipts
                                           ? Colors.white
                                           : Theme.of(context)
                                               .colorScheme
                                               .onSurface,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Rodzinne',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _showFamilyReceipts
+                                            ? Colors.white
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      Text(
-                        'Sortuj:',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      PopupMenuButton<String>(
-                        tooltip: 'Sortowanie',
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surface,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
+                        PopupMenuButton<String>(
+                          tooltip: 'Sortowanie',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.3),
+                                  .surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.sort, size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _sortLabel,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _sortLabel,
-                                style: const TextStyle(fontSize: 12),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'date_desc':
+                                _setSort('Data ↓', 'uploaded_at', false);
+                              case 'date_asc':
+                                _setSort('Data ↑', 'uploaded_at', true);
+                              case 'amount_desc':
+                                _setSort('Kwota ↓', 'amount', false);
+                              case 'amount_asc':
+                                _setSort('Kwota ↑', 'amount', true);
+                              case 'merchant_asc':
+                                _setSort('Sklep A-Z', 'merchant_name', true);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                                value: 'date_desc',
+                                child: Text('Data dodania ↓')),
+                            const PopupMenuItem(
+                                value: 'date_asc',
+                                child: Text('Data dodania ↑')),
+                            const PopupMenuItem(
+                                value: 'amount_desc',
+                                child: Text('Kwota ↓')),
+                            const PopupMenuItem(
+                                value: 'amount_asc',
+                                child: Text('Kwota ↑')),
+                            const PopupMenuItem(
+                                value: 'merchant_asc',
+                                child: Text('Sklep A-Z')),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => context.go('/receipts'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withValues(alpha: 0.3),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.unfold_more, size: 16),
-                            ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.grid_view_rounded, size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6)),
+                                const SizedBox(width: 4),
+                                const Text('Grid',
+                                    style: TextStyle(fontSize: 12)),
+                              ],
+                            ),
                           ),
                         ),
-                        onSelected: (value) {
-                          switch (value) {
-                            case 'date_desc':
-                              _setSort('Data dodania ↓', 'uploaded_at', false);
-                            case 'date_asc':
-                              _setSort('Data dodania ↑', 'uploaded_at', true);
-                            case 'amount_desc':
-                              _setSort('Kwota ↓', 'amount', false);
-                            case 'amount_asc':
-                              _setSort('Kwota ↑', 'amount', true);
-                            case 'merchant_asc':
-                              _setSort('Sklep A-Z', 'merchant_name', true);
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                              value: 'date_desc',
-                              child: Text('Data dodania ↓')),
-                          const PopupMenuItem(
-                              value: 'date_asc',
-                              child: Text('Data dodania ↑')),
-                          const PopupMenuItem(
-                              value: 'amount_desc',
-                              child: Text('Kwota ↓')),
-                          const PopupMenuItem(
-                              value: 'amount_asc',
-                              child: Text('Kwota ↑')),
-                          const PopupMenuItem(
-                              value: 'merchant_asc',
-                              child: Text('Sklep A-Z')),
-                        ],
-                      ),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: () => context.go('/receipts'),
-                        icon: const Icon(Icons.grid_view_rounded, size: 16),
-                        label: const Text('Zobacz wszystkie',
-                            style: TextStyle(fontSize: 12)),
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -535,12 +552,36 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
+                    // "Load more" footer
                     if (index == _receipts.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2)),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Wyświetlono ${_receipts.length} z ${_counts[_filterType] ?? '?'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _isLoadingMore
+                                ? const SizedBox(
+                                    height: 32,
+                                    width: 32,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : OutlinedButton(
+                                    onPressed: _loadMore,
+                                    child: const Text('Załaduj więcej'),
+                                  ),
+                          ],
+                        ),
                       );
                     }
                     final receipt = _receipts[index];
