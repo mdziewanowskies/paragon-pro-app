@@ -647,94 +647,119 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
-        child: Stack(
-          children: [
-            Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: CachedNetworkImage(
-                    imageUrl: receipt.imageUrl,
-                    fit: BoxFit.contain,
-                    placeholder: (_, __) => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey[900],
-                      child: const Center(
-                        child: Icon(Icons.broken_image,
-                            size: 64, color: Colors.grey),
-                      ),
-                    ),
+      builder: (context) => _ReceiptPreviewDialog(receipt: receipt),
+    );
+  }
+}
+
+class _ReceiptPreviewDialog extends StatefulWidget {
+  final ReceiptModel receipt;
+  const _ReceiptPreviewDialog({required this.receipt});
+
+  @override
+  State<_ReceiptPreviewDialog> createState() => _ReceiptPreviewDialogState();
+}
+
+class _ReceiptPreviewDialogState extends State<_ReceiptPreviewDialog> {
+  bool _imageLoadFailed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final receipt = widget.receipt;
+
+    if (_imageLoadFailed) {
+      return KsefInvoicePreviewDialog(receipt: receipt);
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: Stack(
+        children: [
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: CachedNetworkImage(
+                  imageUrl: receipt.imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => const SizedBox(
+                    width: 200,
+                    height: 300,
+                    child: Center(child: CircularProgressIndicator()),
                   ),
+                  errorWidget: (_, __, ___) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() => _imageLoadFailed = true);
+                    });
+                    return const SizedBox(
+                      width: 200,
+                      height: 300,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  },
                 ),
               ),
             ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              style: IconButton.styleFrom(backgroundColor: Colors.black54),
+            ),
+          ),
+          if (receipt.merchantName != null || receipt.amount != null)
             Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon:
-                    const Icon(Icons.close, color: Colors.white, size: 28),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.black54,
-                ),
-              ),
-            ),
-            if (receipt.merchantName != null || receipt.amount != null)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.8),
-                      ],
-                    ),
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (receipt.merchantName != null)
-                        Text(
-                          receipt.merchantName!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      if (receipt.amount != null)
-                        Text(
-                          '${receipt.amount!.toStringAsFixed(2)} zł',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (receipt.merchantName != null)
+                      Text(
+                        receipt.merchantName!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    if (receipt.amount != null)
+                      Text(
+                        '${receipt.amount!.toStringAsFixed(2)} zł',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
