@@ -7,7 +7,6 @@ import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
-import '../../../../shared/widgets/theme_toggle.dart';
 import '../widgets/dashboard_stats.dart';
 import '../widgets/gamification_progress.dart';
 import '../widgets/welcome_banner.dart';
@@ -30,7 +29,6 @@ final dashboardStatsProvider =
 
   final repo = ref.read(receiptRepositoryProvider);
 
-  // Get only regular receipts for stats (exclude KSeF invoices)
   final receipts = await repo.getReceipts(
     userId: userId,
     limit: 10000,
@@ -52,7 +50,6 @@ final dashboardStatsProvider =
   final avg = receipts.isNotEmpty ? total / receipts.length : 0.0;
 
   String topCategory = '-';
-  // Exclude "Faktury" from top category — we only want receipt categories
   final receiptCategories = Map.of(catExpenses)
     ..remove('Faktury')
     ..remove('Faktura KSeF');
@@ -69,7 +66,6 @@ final dashboardStatsProvider =
         .key;
   }
 
-  // Active warranties count — only those not yet expired
   final now = DateTime.now().toIso8601String().split('T').first;
   final warranties = await SupabaseService.client
       .from('warranties')
@@ -110,30 +106,22 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  int _currentTab = 0;
 
-  final _tabs = const [
-    Tab(icon: Icon(Icons.store_rounded), text: 'Sklepy'),
-    Tab(icon: Icon(Icons.receipt_long_rounded), text: 'Paragony'),
-    Tab(icon: Icon(Icons.description_rounded), text: 'KSeF'),
-    Tab(icon: Icon(Icons.shield_rounded), text: 'Gwarancje'),
-    Tab(icon: Icon(Icons.analytics_rounded), text: 'Analityka'),
-    Tab(icon: Icon(Icons.emoji_events_rounded), text: 'Gamifikacja'),
-    Tab(icon: Icon(Icons.family_restroom_rounded), text: 'Rodzina'),
-    Tab(icon: Icon(Icons.summarize_rounded), text: 'Raporty'),
+  // "Więcej" sub-screens
+  static const _moreItems = [
+    _MoreItem(Icons.store_rounded, 'Sklepy'),
+    _MoreItem(Icons.analytics_rounded, 'Analityka'),
+    _MoreItem(Icons.emoji_events_rounded, 'Gamifikacja'),
+    _MoreItem(Icons.family_restroom_rounded, 'Rodzina'),
+    _MoreItem(Icons.summarize_rounded, 'Raporty'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-
-    // Check profile on first load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkProfile();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkProfile());
   }
 
   Future<void> _checkProfile() async {
@@ -145,202 +133,344 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(profileProvider);
-    final stats = ref.watch(dashboardStatsProvider);
-    final gamification = ref.watch(gamificationDataProvider);
-
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            // App bar with gradient
-            SliverAppBar(
-              floating: true,
-              snap: true,
-              backgroundColor: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.darkBackground
-                  : AppColors.lightBackground,
-              title: const AppLogoWithText(logoSize: 32, fontSize: 18),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.person_rounded),
-                  onPressed: () => context.go('/profile'),
-                  tooltip: 'Profil',
-                ),
-                const ThemeToggle(),
-                IconButton(
-                  icon: const Icon(Icons.shopping_bag_rounded),
-                  onPressed: () => context.go('/pricing'),
-                  tooltip: 'Subskrypcja',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.settings_rounded),
-                  onPressed: () => context.go('/settings'),
-                  tooltip: 'Ustawienia',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout_rounded),
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Wylogowanie'),
-                        content: const Text(
-                            'Czy na pewno chcesz się wylogować?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Anuluj'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Wyloguj'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true && context.mounted) {
-                      await ref.read(authServiceProvider).signOut();
-                      if (context.mounted) context.go('/login');
-                    }
-                  },
-                  tooltip: 'Wyloguj',
-                ),
-              ],
-            ),
-            // Dashboard content
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    // Welcome banner
-                    WelcomeBanner(
-                      userName: profile.value?.firstName,
-                    ),
-                    const SizedBox(height: 16),
-                    // Stats
-                    stats.when(
-                      loading: () => const SizedBox(height: 200),
-                      error: (_, __) => const SizedBox.shrink(),
-                      data: (data) => DashboardStats(
-                        totalExpenses:
-                            data['totalExpenses'] as double? ?? 0,
-                        avgExpenses:
-                            data['avgExpenses'] as double? ?? 0,
-                        receiptCount:
-                            data['receiptCount'] as int? ?? 0,
-                        activeWarranties:
-                            data['activeWarranties'] as int? ?? 0,
-                        topCategory:
-                            data['topCategory'] as String? ?? '-',
-                        topMerchant:
-                            data['topMerchant'] as String? ?? '-',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Gamification progress
-                    gamification.when(
-                      loading: () => const SizedBox(height: 150),
-                      error: (_, __) => const SizedBox.shrink(),
-                      data: (data) {
-                        final userId =
-                            SupabaseService.auth.currentUser?.id ?? '';
-                        final best =
-                            ref.watch(bestAchievementProvider(userId));
-                        return GamificationProgress(
-                          level: data['level'] as int? ?? 1,
-                          points: data['points'] as int? ?? 0,
-                          streakDays:
-                              data['streak_count'] as int? ?? 0,
-                          totalReceipts:
-                              data['total_receipts'] as int? ?? 0,
-                          bestAchievementIcon: best.value?['icon'] as String?,
-                          bestAchievementName: best.value?['name'] as String?,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Receipt upload
-                    ReceiptUpload(
-                      onUploaded: () {
-                        ref.invalidate(dashboardStatsProvider);
-                        ref.invalidate(gamificationDataProvider);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-            // Tabs
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _StickyTabBarDelegate(
-                TabBar(
-                  controller: _tabController,
-                  tabs: _tabs,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                ),
-                Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.darkBackground
-                    : AppColors.lightBackground,
-              ),
-            ),
-          ];
-        },
-        body: TabBarView(
-          controller: _tabController,
-          children: const [
-            StoresScreen(),
-            ReceiptListScreen(),
-            KsefPanelScreen(),
-            WarrantyListScreen(),
-            AnalyticsScreen(),
-            GamificationScreen(),
-            FamilyScreen(),
-            ReportsScreen(),
+        child: IndexedStack(
+          index: _currentTab,
+          children: [
+            _HomeTab(),
+            const ReceiptListScreen(),
+            const KsefPanelScreen(),
+            const WarrantyListScreen(),
+            _MoreTab(items: _moreItems),
           ],
         ),
       ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentTab,
+        onDestinationSelected: (i) => setState(() => _currentTab = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'Paragony',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description_rounded),
+            label: 'KSeF',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shield_outlined),
+            selectedIcon: Icon(Icons.shield_rounded),
+            label: 'Gwarancje',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.more_horiz),
+            selectedIcon: Icon(Icons.more_horiz),
+            label: 'Więcej',
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  final Color backgroundColor;
+// ─── Home Tab ────────────────────────────────────────────────
 
-  _StickyTabBarDelegate(this.tabBar, this.backgroundColor);
+class _HomeTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider);
+    final stats = ref.watch(dashboardStatsProvider);
+    final gamification = ref.watch(gamificationDataProvider);
 
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: backgroundColor,
-      child: tabBar,
+    return CustomScrollView(
+      slivers: [
+        // App bar
+        SliverAppBar(
+          floating: true,
+          snap: true,
+          backgroundColor: AppColors.darkBackground,
+          title: const AppLogoWithText(logoSize: 32, fontSize: 18),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_rounded),
+              onPressed: () => context.go('/profile'),
+              tooltip: 'Profil',
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_rounded),
+              onPressed: () => context.go('/settings'),
+              tooltip: 'Ustawienia',
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Wylogowanie'),
+                    content:
+                        const Text('Czy na pewno chcesz się wylogować?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Anuluj'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Wyloguj'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && context.mounted) {
+                  await ref.read(authServiceProvider).signOut();
+                  if (context.mounted) context.go('/login');
+                }
+              },
+              tooltip: 'Wyloguj',
+            ),
+          ],
+        ),
+        // Content
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                WelcomeBanner(userName: profile.value?.firstName),
+                const SizedBox(height: 16),
+                stats.when(
+                  loading: () => const SizedBox(height: 200),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (data) => DashboardStats(
+                    totalExpenses:
+                        data['totalExpenses'] as double? ?? 0,
+                    avgExpenses: data['avgExpenses'] as double? ?? 0,
+                    receiptCount: data['receiptCount'] as int? ?? 0,
+                    activeWarranties:
+                        data['activeWarranties'] as int? ?? 0,
+                    topCategory:
+                        data['topCategory'] as String? ?? '-',
+                    topMerchant:
+                        data['topMerchant'] as String? ?? '-',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                gamification.when(
+                  loading: () => const SizedBox(height: 150),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (data) {
+                    final userId =
+                        SupabaseService.auth.currentUser?.id ?? '';
+                    final best =
+                        ref.watch(bestAchievementProvider(userId));
+                    return GamificationProgress(
+                      level: data['level'] as int? ?? 1,
+                      points: data['points'] as int? ?? 0,
+                      streakDays: data['streak_count'] as int? ?? 0,
+                      totalReceipts:
+                          data['total_receipts'] as int? ?? 0,
+                      bestAchievementIcon:
+                          best.value?['icon'] as String?,
+                      bestAchievementName:
+                          best.value?['name'] as String?,
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                ReceiptUpload(
+                  onUploaded: () {
+                    ref.invalidate(dashboardStatsProvider);
+                    ref.invalidate(gamificationDataProvider);
+                  },
+                ),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
+  }
+}
+
+// ─── More Tab ────────────────────────────────────────────────
+
+class _MoreItem {
+  final IconData icon;
+  final String label;
+  const _MoreItem(this.icon, this.label);
+}
+
+class _MoreTab extends StatefulWidget {
+  final List<_MoreItem> items;
+  const _MoreTab({required this.items});
+
+  @override
+  State<_MoreTab> createState() => _MoreTabState();
+}
+
+class _MoreTabState extends State<_MoreTab> {
+  int? _selectedIndex;
+
+  Widget? get _selectedScreen {
+    if (_selectedIndex == null) return null;
+    switch (_selectedIndex!) {
+      case 0:
+        return const StoresScreen();
+      case 1:
+        return const AnalyticsScreen();
+      case 2:
+        return const GamificationScreen();
+      case 3:
+        return const FamilyScreen();
+      case 4:
+        return const ReportsScreen();
+      default:
+        return null;
+    }
   }
 
   @override
-  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) {
-    return tabBar != oldDelegate.tabBar ||
-        backgroundColor != oldDelegate.backgroundColor;
+  Widget build(BuildContext context) {
+    if (_selectedIndex != null) {
+      return Column(
+        children: [
+          // Back bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => setState(() => _selectedIndex = null),
+                ),
+                Text(
+                  widget.items[_selectedIndex!].label,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _selectedScreen!),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Więcej',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+        ),
+        ...widget.items.asMap().entries.map((entry) {
+          final i = entry.key;
+          final item = entry.value;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(item.icon,
+                    color: Theme.of(context).colorScheme.primary),
+              ),
+              title: Text(item.label,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => setState(() => _selectedIndex = i),
+            ),
+          );
+        }),
+        const SizedBox(height: 8),
+        // Quick links
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.person_rounded,
+                  color: Theme.of(context).colorScheme.primary),
+            ),
+            title: const Text('Profil',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/profile'),
+          ),
+        ),
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.workspace_premium_rounded,
+                  color: Theme.of(context).colorScheme.primary),
+            ),
+            title: const Text('Plany cenowe',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/pricing'),
+          ),
+        ),
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.settings_rounded,
+                  color: Theme.of(context).colorScheme.primary),
+            ),
+            title: const Text('Ustawienia',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/settings'),
+          ),
+        ),
+      ],
+    );
   }
 }

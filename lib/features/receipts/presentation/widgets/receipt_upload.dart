@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/merchant_normalizer.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/subscription_service.dart';
@@ -127,7 +128,8 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
             // Try both camelCase and snake_case keys from Edge Function
             final amount = aiData['amount'];
             receiptData.addAll({
-              'merchant_name': aiData['merchantName'] ?? aiData['merchant_name'],
+              'merchant_name': MerchantNameNormalizer.normalize(
+                  (aiData['merchantName'] ?? aiData['merchant_name'] ?? '') as String),
               'merchant_address': aiData['merchantAddress'] ?? aiData['merchant_address'],
               'amount': amount != null
                   ? (amount is String

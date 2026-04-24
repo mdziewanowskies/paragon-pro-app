@@ -9,7 +9,6 @@ class VatSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Group by VAT rate
     final Map<String, Map<String, double>> vatGroups = {};
     for (final inv in invoices) {
       final rate = inv.vatRate ?? 'Inne';
@@ -40,77 +39,85 @@ class VatSummary extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            Table(
-              columnWidths: const {
-                0: FlexColumnWidth(1),
-                1: FlexColumnWidth(1.2),
-                2: FlexColumnWidth(1.2),
-                3: FlexColumnWidth(1.2),
-              },
+            // Per-rate rows
+            ...vatGroups.entries.map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          e.key,
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Netto ${Formatters.formatCurrency(e.value['net'])}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      Text(
+                        Formatters.formatCurrency(e.value['gross']),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                )),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 4),
+            // Totals
+            Row(
               children: [
-                TableRow(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.1),
+                Text(
+                  'SUMA',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                  children: [
-                    _header('Stawka'),
-                    _header('Netto'),
-                    _header('VAT'),
-                    _header('Brutto'),
-                  ],
                 ),
-                ...vatGroups.entries.map((e) => TableRow(
-                      children: [
-                        _cell(e.key),
-                        _cell(Formatters.formatCurrency(e.value['net'])),
-                        _cell(Formatters.formatCurrency(e.value['vat'])),
-                        _cell(Formatters.formatCurrency(e.value['gross']),
-                            bold: true),
-                      ],
-                    )),
-                TableRow(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                          color: Theme.of(context).colorScheme.outline),
-                    ),
-                  ),
+                const Spacer(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _cell('SUMA', bold: true),
-                    _cell(Formatters.formatCurrency(totalNet), bold: true),
-                    _cell(Formatters.formatCurrency(totalVat), bold: true),
-                    _cell(Formatters.formatCurrency(totalGross), bold: true),
+                    Text(
+                      'Netto: ${Formatters.formatCurrency(totalNet)}  |  VAT: ${Formatters.formatCurrency(totalVat)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                    ),
+                    Text(
+                      Formatters.formatCurrency(totalGross),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _header(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  Widget _cell(String text, {bool bold = false}) {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
         ),
       ),
     );
