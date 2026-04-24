@@ -26,6 +26,19 @@ class Formatters {
     return _monthYearPl.format(date);
   }
 
+  static String formatRelativeDate(DateTime? date) {
+    if (date == null) return '-';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(d).inDays;
+
+    if (diff == 0) return 'Dzisiaj';
+    if (diff == 1) return 'Wczoraj';
+    if (diff <= 7) return '$diff dni temu';
+    return formatDate(date);
+  }
+
   static String formatCurrency(double? amount) {
     if (amount == null) return '0,00 zł';
     return _currencyPl.format(amount);

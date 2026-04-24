@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/polish_plurals.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
-import '../widgets/store_tile.dart';
+import '../../data/store_logo_service.dart';
 import 'store_detail_screen.dart';
 
 final storeStatsProvider =
@@ -48,12 +50,14 @@ class StoresScreen extends ConsumerWidget {
 
         return RefreshIndicator(
           onRefresh: () async => ref.invalidate(storeStatsProvider),
-          child: CustomScrollView(
-            slivers: [
-              // Summary header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: list.length + 1,
+            itemBuilder: (context, index) {
+              // Header
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     children: [
                       Icon(Icons.store_rounded,
@@ -68,13 +72,6 @@ class StoresScreen extends ConsumerWidget {
                         ),
                       ),
                       const Spacer(),
-                      Icon(Icons.trending_up_rounded,
-                          size: 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5)),
-                      const SizedBox(width: 4),
                       Text(
                         'Łącznie: ${Formatters.formatCurrency(totalSpent)}',
                         style: TextStyle(
@@ -87,55 +84,173 @@ class StoresScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
-              // Grid
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.85,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final store = list[index];
-                      final storeId = store['store_id'] as String;
-                      final storeName =
-                          store['store_name'] as String? ?? 'Sklep';
-                      final receiptCount =
-                          (store['receipt_count'] as num?)?.toInt() ?? 0;
-                      final totalSpent =
-                          (store['total_spent'] as num?)?.toDouble() ?? 0;
+                );
+              }
 
-                      return StoreTile(
-                        storeName: storeName,
-                        receiptCount: receiptCount,
-                        totalSpent: totalSpent,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => StoreDetailScreen(
-                                storeId: storeId,
-                                storeName: storeName,
+              final store = list[index - 1];
+              final storeId = store['store_id'] as String;
+              final storeName =
+                  store['store_name'] as String? ?? 'Sklep';
+              final receiptCount =
+                  (store['receipt_count'] as num?)?.toInt() ?? 0;
+              final spent =
+                  (store['total_spent'] as num?)?.toDouble() ?? 0;
+              final lastPurchase = store['last_purchase'] as String?;
+              final faviconUrl =
+                  StoreLogoService.getFaviconUrl(storeName);
+              final initials =
+                  StoreLogoService.getInitials(storeName);
+              final color = StoreLogoService.getColor(storeName);
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => StoreDetailScreen(
+                          storeId: storeId,
+                          storeName: storeName,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        // Logo
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: faviconUrl != null
+                              ? CachedNetworkImage(
+                                  imageUrl: faviconUrl,
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.contain,
+                                  errorWidget: (_, __, ___) =>
+                                      _InitialsAvatar(
+                                          initials: initials,
+                                          color: color),
+                                )
+                              : _InitialsAvatar(
+                                  initials: initials, color: color),
+                        ),
+                        const SizedBox(width: 14),
+                        // Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                storeName,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    childCount: list.length,
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.15),
+                                      borderRadius:
+                                          BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      PolishPlurals.receipts(
+                                          receiptCount),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
+                                    ),
+                                  ),
+                                  if (lastPurchase != null) ...[
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Ostatni: ${Formatters.formatDate(DateTime.tryParse(lastPurchase))}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Amount
+                        Text(
+                          Formatters.formatCurrency(spent),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color:
+                                Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.chevron_right,
+                            size: 20,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.3)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
+              );
+            },
           ),
         );
       },
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  final String initials;
+  final Color color;
+  const _InitialsAvatar({required this.initials, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
     );
   }
 }

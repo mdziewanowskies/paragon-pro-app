@@ -113,7 +113,7 @@ class ReceiptCard extends StatelessWidget {
               ),
               if (receipt.purchaseDate != null)
                 Text(
-                  Formatters.formatDate(receipt.purchaseDate),
+                  Formatters.formatRelativeDate(receipt.purchaseDate),
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context)

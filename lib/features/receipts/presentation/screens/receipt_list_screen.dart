@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
@@ -210,6 +211,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   Future<void> _deleteReceipt(ReceiptModel receipt) async {
     final confirm = await _confirmDelete(receipt);
     if (confirm) {
+      HapticFeedback.mediumImpact();
       await ref.read(receiptRepositoryProvider).deleteReceipt(receipt.id);
       _loadReceipts();
       _loadCounts();
@@ -548,6 +550,9 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                 subtitle: _filterType == ReceiptFilterType.ksefOnly
                     ? 'Zsynchronizuj faktury w zakładce KSeF'
                     : 'Zrób zdjęcie pierwszego paragonu, aby rozpocząć!',
+                hint: _filterType == ReceiptFilterType.ksefOnly
+                    ? 'Przejdź do zakładki KSeF i kliknij "Pobierz faktury"'
+                    : 'Wróć na Home i kliknij "Zrób zdjęcie"',
               ),
             )
           else
