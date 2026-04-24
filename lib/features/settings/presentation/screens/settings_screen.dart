@@ -122,16 +122,18 @@ class SettingsScreen extends ConsumerWidget {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () async {
-                            await NotificationService.requestPermission();
+                            final granted =
+                                await NotificationService.requestPermission();
                             await NotificationService.showInstant(
                               title: 'Test ParagonPro',
                               body: 'Powiadomienia działają poprawnie!',
                             );
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Wysłano testowe powiadomienie')),
+                                SnackBar(
+                                    content: Text(granted
+                                        ? 'Wysłano testowe powiadomienie'
+                                        : 'Brak uprawnień — włącz powiadomienia w Ustawieniach systemu')),
                               );
                             }
                           },

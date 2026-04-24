@@ -9,44 +9,57 @@ class NotificationService {
 
   static Future<void> initialize() async {
     if (_initialized) return;
-    tz.initializeTimeZones();
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-    const settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
+    try {
+      tz.initializeTimeZones();
 
-    await _plugin.initialize(settings);
-    _initialized = true;
-    debugPrint('NotificationService initialized');
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const settings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      final result = await _plugin.initialize(settings);
+      _initialized = true;
+      debugPrint('NotificationService initialized: $result');
+    } catch (e) {
+      debugPrint('NotificationService init FAILED: $e');
+    }
   }
 
   static Future<bool> requestPermission() async {
-    // iOS
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
-    if (ios != null) {
-      final granted = await ios.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      return granted ?? false;
-    }
+    if (!_initialized) await initialize();
 
-    // Android 13+
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      final granted = await android.requestNotificationsPermission();
-      return granted ?? false;
+    try {
+      // iOS
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final granted = await ios.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        debugPrint('iOS notification permission: $granted');
+        return granted ?? false;
+      }
+
+      // Android 13+
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        final granted = await android.requestNotificationsPermission();
+        debugPrint('Android notification permission: $granted');
+        return granted ?? false;
+      }
+    } catch (e) {
+      debugPrint('requestPermission error: $e');
     }
 
     return true;
@@ -60,40 +73,51 @@ class NotificationService {
     required DateTime expiryDate,
     int daysBefore = 30,
   }) async {
-    final notifyDate =
-        expiryDate.subtract(Duration(days: daysBefore));
+    if (!_initialized) await initialize();
 
-    if (notifyDate.isBefore(DateTime.now())) return;
+    // Schedule at 9:00 AM on the notification day
+    final notifyDay = expiryDate.subtract(Duration(days: daysBefore));
+    final notifyDate = DateTime(
+        notifyDay.year, notifyDay.month, notifyDay.day, 9, 0);
+
+    if (notifyDate.isBefore(DateTime.now())) {
+      debugPrint('Warranty reminder skipped — date in past: $notifyDate');
+      return;
+    }
 
     final id = warrantyId.hashCode & 0x7FFFFFFF;
 
-    await _plugin.zonedSchedule(
-      id,
-      'Gwarancja wygasa wkrótce',
-      'Gwarancja z $merchantName wygasa za $daysBefore dni (${_formatDate(expiryDate)})',
-      _toTZDateTime(notifyDate),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'warranty_reminders',
-          'Przypomnienia o gwarancjach',
-          channelDescription: 'Powiadomienia o wygasających gwarancjach',
-          importance: Importance.high,
-          priority: Priority.high,
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        'Gwarancja wygasa wkrótce',
+        'Gwarancja z $merchantName wygasa za $daysBefore dni (${_formatDate(expiryDate)})',
+        _toTZDateTime(notifyDate),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'warranty_reminders',
+            'Przypomnienia o gwarancjach',
+            channelDescription:
+                'Powiadomienia o wygasających gwarancjach',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: null,
-    );
-
-    debugPrint(
-        'Scheduled warranty reminder for $merchantName on ${notifyDate.toIso8601String()}');
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: null,
+      );
+      debugPrint(
+          'Scheduled warranty reminder #$id for $merchantName on $notifyDate');
+    } catch (e) {
+      debugPrint('scheduleWarrantyReminder error: $e');
+    }
   }
 
   // ─── Streak reminder ─────────────────────────────────────
@@ -102,31 +126,37 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
+    if (!_initialized) await initialize();
     const id = 999001;
 
-    await _plugin.zonedSchedule(
-      id,
-      'Nie przerwij serii!',
-      'Zeskanuj paragon, aby utrzymać swoją serię dni w ParagonPro',
-      _nextInstanceOfTime(hour, minute),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'streak_reminders',
-          'Przypomnienia o serii',
-          channelDescription: 'Codzienne przypomnienia o skanowaniu',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        'Nie przerwij serii!',
+        'Zeskanuj paragon, aby utrzymać swoją serię dni w ParagonPro',
+        _nextInstanceOfTime(hour, minute),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'streak_reminders',
+            'Przypomnienia o serii',
+            channelDescription: 'Codzienne przypomnienia o skanowaniu',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+          ),
         ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentSound: true,
-        ),
-      ),
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint('Scheduled daily streak reminder at $hour:$minute');
+    } catch (e) {
+      debugPrint('scheduleDailyStreakReminder error: $e');
+    }
   }
 
   // ─── Instant notification (KSeF, achievements) ───────────
@@ -137,26 +167,34 @@ class NotificationService {
     String channelId = 'general',
     String channelName = 'Ogólne',
   }) async {
-    final id = DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF;
+    if (!_initialized) await initialize();
 
-    await _plugin.show(
-      id,
-      title,
-      body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channelId,
-          channelName,
-          importance: Importance.high,
-          priority: Priority.high,
+    final id = DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF;
+    debugPrint('Showing instant notification #$id: $title');
+
+    try {
+      await _plugin.show(
+        id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelId,
+            channelName,
+            importance: Importance.max,
+            priority: Priority.max,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-    );
+      );
+      debugPrint('Instant notification sent OK');
+    } catch (e) {
+      debugPrint('showInstant error: $e');
+    }
   }
 
   // ─── Cancel ──────────────────────────────────────────────
@@ -178,7 +216,8 @@ class NotificationService {
 
   static TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = TZDateTime.now(local);
-    var scheduled = TZDateTime(local, now.year, now.month, now.day, hour, minute);
+    var scheduled =
+        TZDateTime(local, now.year, now.month, now.day, hour, minute);
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
