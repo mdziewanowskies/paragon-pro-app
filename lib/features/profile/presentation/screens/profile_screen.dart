@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -101,11 +102,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_rounded),
           onPressed: () => context.go('/'),
         ),
-        title: const Text('Powrót do panelu'),
-        titleTextStyle: Theme.of(context).textTheme.titleMedium,
+        title: const Text('Profil'),
       ),
       body: profileState.when(
         loading: () => const LoadingSpinner(),
@@ -113,342 +113,243 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         data: (profile) {
           _populateFields();
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+          return Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                // Subscription section
+                // ── Section: Subskrypcja ──
+                _SectionHeader('Subskrypcja'),
                 Card(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.workspace_premium_rounded),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Subskrypcja',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge,
-                            ),
-                            const Spacer(),
-                            subscription.when(
-                              data: (sub) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outline
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  sub.tier == 'free'
-                                      ? 'Darmowy'
-                                      : sub.tier == 'premium'
-                                          ? 'Premium'
-                                          : 'Rodzinny',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                              loading: () =>
-                                  const SizedBox(width: 16, height: 16),
-                              error: (_, __) => const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Zarządzaj swoim planem i limitami',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        subscription.when(
-                          data: (sub) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: subscription.when(
+                      loading: () => const LoadingSpinner(),
+                      error: (_, __) =>
+                          const Text('Błąd ładowania subskrypcji'),
+                      data: (sub) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              // Progress bar
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surface,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outline
-                                        .withValues(alpha: 0.2),
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text('Paragony w tym miesiącu',
-                                            style: TextStyle(fontSize: 13)),
-                                        Text(
-                                          '${sub.currentMonthReceipts} / ${sub.maxReceiptsPerMonth}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: LinearProgressIndicator(
-                                        value: sub.usagePercentage,
-                                        minHeight: 6,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text('Twój plan obejmuje:',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14)),
-                              const SizedBox(height: 8),
-                              _FeatureRow(
-                                  '${sub.maxReceiptsPerMonth} paragonów/miesiąc',
-                                  true),
-                              _FeatureRow(
-                                  'Podstawowe OCR', true),
-                              if (sub.isPremium) ...[
-                                _FeatureRow('Zaawansowane OCR AI', true),
-                                _FeatureRow(
-                                    'Zaawansowana analityka', true),
-                                _FeatureRow(
-                                    'Priorytetowe wsparcie', true),
-                              ],
-                              const SizedBox(height: 16),
-                              if (sub.isFree)
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () =>
-                                        context.go('/pricing'),
-                                    icon: const Icon(
-                                        Icons.workspace_premium_rounded),
-                                    label: const Text('Ulepsz do Premium'),
-                                  ),
-                                ),
-                              Center(
-                                child: TextButton(
-                                  onPressed: () =>
-                                      context.go('/pricing'),
-                                  child: const Text(
-                                      'Zobacz wszystkie plany'),
-                                ),
+                              const Icon(Icons.workspace_premium_rounded,
+                                  size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                sub.tier == 'free'
+                                    ? 'Plan Darmowy'
+                                    : sub.tier == 'premium'
+                                        ? 'Plan Premium'
+                                        : 'Plan Rodzinny',
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700),
                               ),
                             ],
                           ),
-                          loading: () => const LoadingSpinner(),
-                          error: (_, __) =>
-                              const Text('Błąd ładowania subskrypcji'),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Paragony w tym miesiącu',
+                                  style: TextStyle(fontSize: 13)),
+                              Text(
+                                sub.isUnlimited
+                                    ? '${sub.currentMonthReceipts} (∞)'
+                                    : '${sub.currentMonthReceipts} / ${sub.maxReceiptsPerMonth}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          if (!sub.isUnlimited) ...[
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: sub.usagePercentage.clamp(0, 1),
+                                minHeight: 6,
+                              ),
+                            ),
+                          ],
+                          if (sub.isFree) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () => context.go('/pricing'),
+                                child: const Text('Ulepsz do Premium'),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // KSeF section
-                const KsefSettings(),
-                const SizedBox(height: 16),
-                // Profile form
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                // ── Section: Integracja KSeF ──
+                _SectionHeader('Integracja KSeF'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: KsefSettings(),
+                ),
+
+                // ── Section: Dane osobowe ──
+                _SectionHeader('Dane osobowe'),
+                _GroupedField(
+                    controller: _usernameController,
+                    label: 'Nazwa użytkownika',
+                    validator: Validators.username),
+                _GroupedRow(children: [
+                  _GroupedField(
+                      controller: _firstNameController,
+                      label: 'Imię',
+                      validator: (v) => Validators.required(v, 'Imię')),
+                  _GroupedField(
+                      controller: _lastNameController,
+                      label: 'Nazwisko',
+                      validator: (v) => Validators.required(v, 'Nazwisko')),
+                ]),
+
+                // ── Section: Adres ──
+                _SectionHeader('Adres'),
+                _GroupedField(
+                    controller: _streetController, label: 'Ulica'),
+                _GroupedRow(children: [
+                  _GroupedField(
+                      controller: _houseNumberController,
+                      label: 'Nr domu'),
+                  _GroupedField(
+                      controller: _apartmentNumberController,
+                      label: 'Nr mieszkania'),
+                ]),
+                _GroupedRow(children: [
+                  _GroupedField(
+                      controller: _postalCodeController,
+                      label: 'Kod pocztowy',
+                      validator: (v) =>
+                          v != null && v.isNotEmpty
+                              ? Validators.postalCode(v)
+                              : null),
+                  _GroupedField(
+                      controller: _cityController, label: 'Miasto'),
+                ]),
+
+                // ── Section: Finanse ──
+                _SectionHeader('Finanse'),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _bankAccountController,
+                    obscureText: _obscureIban,
+                    decoration: InputDecoration(
+                      labelText: 'Numer konta bankowego',
+                      hintText: 'PL00 0000 0000 0000 0000 0000 0000',
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Dane osobowe',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge,
+                          IconButton(
+                            icon: Icon(_obscureIban
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                                size: 20),
+                            onPressed: () => setState(
+                                () => _obscureIban = !_obscureIban),
                           ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _usernameController,
-                            decoration: const InputDecoration(
-                                labelText: 'Nazwa użytkownika'),
-                            validator: Validators.username,
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _firstNameController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Imię'),
-                                  validator: (v) =>
-                                      Validators.required(v, 'Imię'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _lastNameController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Nazwisko'),
-                                  validator: (v) =>
-                                      Validators.required(v, 'Nazwisko'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _streetController,
-                            decoration: const InputDecoration(
-                                labelText: 'Ulica'),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _houseNumberController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Nr domu'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller:
-                                      _apartmentNumberController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Nr mieszkania'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _postalCodeController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Kod pocztowy'),
-                                  validator: (v) => v != null &&
-                                          v.isNotEmpty
-                                      ? Validators.postalCode(v)
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _cityController,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Miasto'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _bankAccountController,
-                            obscureText: _obscureIban,
-                            decoration: InputDecoration(
-                              labelText: 'Numer konta bankowego',
-                              hintText:
-                                  'PL00 0000 0000 0000 0000 0000 0000',
-                              suffixIcon: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(_obscureIban
-                                        ? Icons.visibility_off
-                                        : Icons.visibility),
-                                    onPressed: () => setState(
-                                        () => _obscureIban = !_obscureIban),
-                                    tooltip: _obscureIban
-                                        ? 'Pokaż'
-                                        : 'Ukryj',
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.copy, size: 20),
-                                    onPressed: () {
-                                      if (_bankAccountController
-                                          .text.isNotEmpty) {
-                                        Clipboard.setData(ClipboardData(
-                                            text: _bankAccountController
-                                                .text));
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Numer konta skopiowany')));
-                                      }
-                                    },
-                                    tooltip: 'Kopiuj',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed:
-                                  _isLoading ? null : _saveProfile,
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 16,
-                                      width: 16,
-                                      child:
-                                          CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                    )
-                                  : const Text('Zapisz zmiany'),
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 18),
+                            onPressed: () {
+                              if (_bankAccountController.text.isNotEmpty) {
+                                Clipboard.setData(ClipboardData(
+                                    text: _bankAccountController.text));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content:
+                                            Text('Numer konta skopiowany')));
+                              }
+                            },
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Logout button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await ref.read(authServiceProvider).signOut();
-                      if (context.mounted) context.go('/login');
-                    },
-                    icon: const Icon(Icons.logout_rounded),
-                    label: const Text('Wyloguj się'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+
+                // ── Save button ──
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveProfile,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
+                            )
+                          : const Text('Zapisz zmiany'),
                     ),
+                  ),
+                ),
+
+                // ── Quick links ──
+                _SectionHeader(''),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      _QuickLink(
+                        icon: Icons.monetization_on_rounded,
+                        label: 'Plany cenowe',
+                        onTap: () => context.go('/pricing'),
+                      ),
+                      _QuickLink(
+                        icon: Icons.settings_rounded,
+                        label: 'Ustawienia',
+                        onTap: () => context.go('/settings'),
+                      ),
+                      _QuickLink(
+                        icon: Icons.logout_rounded,
+                        label: 'Wyloguj się',
+                        color: Colors.red,
+                        onTap: () async {
+                          final confirm = await showCupertinoModalPopup<bool>(
+                            context: context,
+                            builder: (ctx) => CupertinoActionSheet(
+                              title: const Text('Wylogowanie'),
+                              message: const Text(
+                                  'Czy na pewno chcesz się wylogować?'),
+                              actions: [
+                                CupertinoActionSheetAction(
+                                  isDestructiveAction: true,
+                                  onPressed: () =>
+                                      Navigator.pop(ctx, true),
+                                  child: const Text('Wyloguj'),
+                                ),
+                              ],
+                              cancelButton: CupertinoActionSheetAction(
+                                onPressed: () =>
+                                    Navigator.pop(ctx, false),
+                                child: const Text('Anuluj'),
+                              ),
+                            ),
+                          );
+                          if (confirm == true && context.mounted) {
+                            await ref.read(authServiceProvider).signOut();
+                            if (context.mounted) context.go('/login');
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -461,26 +362,111 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-class _FeatureRow extends StatelessWidget {
-  final String text;
-  final bool included;
+// ─── Helpers ────────────────────────────────────────────────
 
-  const _FeatureRow(this.text, this.included);
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    if (title.isEmpty) return const SizedBox(height: 8);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: Theme.of(context)
+              .colorScheme
+              .onSurface
+              .withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupedField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? Function(String?)? validator;
+
+  const _GroupedField({
+    required this.controller,
+    required this.label,
+    this.validator,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label),
+        validator: validator,
+      ),
+    );
+  }
+}
+
+class _GroupedRow extends StatelessWidget {
+  final List<_GroupedField> children;
+  const _GroupedRow({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
-        children: [
-          Icon(
-            included ? Icons.check_circle : Icons.cancel,
-            size: 18,
-            color: included ? Colors.green : Colors.grey,
-          ),
-          const SizedBox(width: 8),
-          Text(text, style: const TextStyle(fontSize: 13)),
-        ],
+        children: children.asMap().entries.map((entry) {
+          final i = entry.key;
+          final child = entry.value;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(left: i > 0 ? 8 : 0),
+              child: TextFormField(
+                controller: child.controller,
+                decoration: InputDecoration(labelText: child.label),
+                validator: child.validator,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _QuickLink extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _QuickLink({
+    required this.icon,
+    required this.label,
+    this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(label,
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.w500, fontSize: 15)),
+        trailing:
+            Icon(Icons.chevron_right, color: color ?? Colors.grey, size: 20),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
