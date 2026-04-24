@@ -211,23 +211,37 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                isUnlimited
-                    ? '$usedCount w tym miesiącu (∞)'
-                    : '$usedCount / $maxCount w tym miesiącu',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
+            Builder(builder: (context) {
+              final usageRatio = isUnlimited
+                  ? 0.0
+                  : (maxCount > 0 ? usedCount / maxCount : 0.0);
+              final counterColor = isUnlimited
+                  ? Theme.of(context).colorScheme.primary
+                  : usageRatio >= 1.2
+                      ? Colors.red
+                      : usageRatio >= 0.8
+                          ? Colors.orange
+                          : Theme.of(context).colorScheme.primary;
+
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: counterColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-            ),
+                child: Text(
+                  isUnlimited
+                      ? '$usedCount w tym miesiącu (∞)'
+                      : '$usedCount / $maxCount w tym miesiącu',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: counterColor,
+                  ),
+                ),
+              );
+            }),
           ],
         ),
         const SizedBox(height: 12),

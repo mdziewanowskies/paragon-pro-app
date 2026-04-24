@@ -69,12 +69,13 @@ final dashboardStatsProvider =
         .key;
   }
 
-  // Active warranties count
+  // Active warranties count — only those not yet expired
+  final now = DateTime.now().toIso8601String().split('T').first;
   final warranties = await SupabaseService.client
       .from('warranties')
-      .select('id, end_date')
+      .select('id')
       .eq('user_id', userId)
-      .gte('end_date', DateTime.now().toIso8601String().split('T').first);
+      .gte('end_date', now);
   final activeWarranties = (warranties as List).length;
 
   return {
@@ -156,7 +157,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final gamification = ref.watch(gamificationDataProvider);
 
     return Scaffold(
-      body: NestedScrollView(
+      body: SafeArea(
+        bottom: false,
+        child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             // App bar with gradient
@@ -180,10 +183,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   tooltip: 'Subskrypcja',
                 ),
                 IconButton(
+                  icon: const Icon(Icons.settings_rounded),
+                  onPressed: () => context.go('/settings'),
+                  tooltip: 'Ustawienia',
+                ),
+                IconButton(
                   icon: const Icon(Icons.logout_rounded),
                   onPressed: () async {
-                    await ref.read(authServiceProvider).signOut();
-                    if (context.mounted) context.go('/login');
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Wylogowanie'),
+                        content: const Text(
+                            'Czy na pewno chcesz się wylogować?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Anuluj'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Wyloguj'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && context.mounted) {
+                      await ref.read(authServiceProvider).signOut();
+                      if (context.mounted) context.go('/login');
+                    }
                   },
                   tooltip: 'Wyloguj',
                 ),
@@ -284,6 +312,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ReportsScreen(),
           ],
         ),
+      ),
       ),
     );
   }

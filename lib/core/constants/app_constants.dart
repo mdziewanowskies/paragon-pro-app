@@ -51,7 +51,6 @@ class AppConstants {
     'Transport',
     'Edukacja',
     'Restauracje',
-    'Faktury',
     'Inne',
   ];
 
@@ -67,7 +66,6 @@ class AppConstants {
     'Transport': 0xe1d7, // directions_car
     'Edukacja': 0xe559, // school
     'Restauracje': 0xe56c, // restaurant
-    'Faktury': 0xe873, // receipt
     'Inne': 0xe3b0, // label
   };
 }

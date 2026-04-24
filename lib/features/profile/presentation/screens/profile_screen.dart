@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/auth_service.dart';
@@ -28,6 +29,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _bankAccountController = TextEditingController();
   bool _isLoading = false;
   bool _initialized = false;
+  bool _obscureIban = true;
 
   @override
   void dispose() {
@@ -372,10 +374,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _bankAccountController,
-                            decoration: const InputDecoration(
+                            obscureText: _obscureIban,
+                            decoration: InputDecoration(
                               labelText: 'Numer konta bankowego',
                               hintText:
                                   'PL00 0000 0000 0000 0000 0000 0000',
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(_obscureIban
+                                        ? Icons.visibility_off
+                                        : Icons.visibility),
+                                    onPressed: () => setState(
+                                        () => _obscureIban = !_obscureIban),
+                                    tooltip: _obscureIban
+                                        ? 'Pokaż'
+                                        : 'Ukryj',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy, size: 20),
+                                    onPressed: () {
+                                      if (_bankAccountController
+                                          .text.isNotEmpty) {
+                                        Clipboard.setData(ClipboardData(
+                                            text: _bankAccountController
+                                                .text));
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Numer konta skopiowany')));
+                                      }
+                                    },
+                                    tooltip: 'Kopiuj',
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),
