@@ -55,6 +55,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             (data as List).map((e) => ReceiptModel.fromJson(e)).toList();
         _isLoading = false;
       });
+
+      // If no receipts left, go back to stores list
+      if (_receipts.isEmpty && mounted) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       setState(() => _isLoading = false);
     }
