@@ -54,6 +54,7 @@ dependencies:
   # PDF
   pdf: ^3.11.2
   flutter_local_notifications: ^17.2.4
+  purchases_flutter: ^10.0.1
 
 dependency_overrides:
   # Pin to version that doesn't use objective_c FFI (fixes iOS 26 simulator crash)

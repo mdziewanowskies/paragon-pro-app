@@ -7,7 +7,7 @@ import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/profile/presentation/screens/profile_setup_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
-import '../../features/subscription/presentation/screens/pricing_screen.dart';
+import '../../features/subscription/presentation/screens/paywall_screen.dart';
 import '../../features/receipts/presentation/screens/receipt_grid_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 
@@ -56,7 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/pricing',
-        builder: (context, state) => const PricingScreen(),
+        builder: (context, state) => const PaywallScreen(),
       ),
       GoRoute(
         path: '/receipts',
