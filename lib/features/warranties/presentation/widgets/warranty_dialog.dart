@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../receipts/data/models/receipt_model.dart';
@@ -72,6 +73,20 @@ class _WarrantyDialogState extends ConsumerState<WarrantyDialog> {
           body: {'userId': userId},
         );
       } catch (_) {}
+
+      // Schedule warranty expiry notifications (30, 7, 1 day before)
+      final merchantName =
+          widget.receipt.merchantName ?? 'Sklep';
+      for (final daysBefore in [30, 7, 1]) {
+        try {
+          await NotificationService.scheduleWarrantyReminder(
+            warrantyId: '${widget.receipt.id}_$daysBefore',
+            merchantName: merchantName,
+            expiryDate: endDate,
+            daysBefore: daysBefore,
+          );
+        } catch (_) {}
+      }
 
       if (mounted) {
         Navigator.pop(context);

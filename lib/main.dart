@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app/app.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/offline_sync_service.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,9 @@ void main() async {
 
   // Initialize offline storage
   await OfflineSyncService.initialize();
+
+  // Initialize notifications
+  await NotificationService.initialize();
 
   runApp(
     const ProviderScope(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/merchant_normalizer.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -179,8 +180,13 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
           ),
         );
         widget.onUploaded?.call();
-        // Signal receipt list to refresh
         ref.read(receiptListRefreshProvider.notifier).state++;
+
+        // Request notification permission after first scan
+        NotificationService.requestPermission();
+        // Schedule daily streak reminder at 20:00
+        NotificationService.scheduleDailyStreakReminder(
+            hour: 20, minute: 0);
       }
     } catch (e) {
       if (mounted) {
