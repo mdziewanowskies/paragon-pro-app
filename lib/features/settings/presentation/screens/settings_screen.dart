@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/supabase_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -101,7 +102,77 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('1.0.0'),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // Test notifications
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_rounded),
+                  title: const Text('Test powiadomień'),
+                  subtitle: const Text(
+                      'Sprawdź czy notyfikacje działają',
+                      style: TextStyle(fontSize: 12)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            await NotificationService.requestPermission();
+                            await NotificationService.showInstant(
+                              title: 'Test ParagonPro',
+                              body: 'Powiadomienia działają poprawnie!',
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Wysłano testowe powiadomienie')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.send_rounded, size: 16),
+                          label: const Text('Instant',
+                              style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            await NotificationService.requestPermission();
+                            await NotificationService
+                                .scheduleWarrantyReminder(
+                              warrantyId: 'test_${DateTime.now().millisecondsSinceEpoch}',
+                              merchantName: 'Test Sklep',
+                              expiryDate: DateTime.now()
+                                  .add(const Duration(minutes: 1, days: 30)),
+                              daysBefore: 30,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Zaplanowano testowe powiadomienie za ~1 min')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.schedule_rounded, size: 16),
+                          label: const Text('Za 1 min',
+                              style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Delete account — required by App Store Guideline 5.1.1
           Card(

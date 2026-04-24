@@ -186,7 +186,7 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
         NotificationService.requestPermission();
         // Schedule daily streak reminder at 20:00
         NotificationService.scheduleDailyStreakReminder(
-            hour: 20, minute: 0);
+            hour: 9, minute: 0);
       }
     } catch (e) {
       if (mounted) {
