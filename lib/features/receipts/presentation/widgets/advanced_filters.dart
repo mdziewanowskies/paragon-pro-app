@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/cupertino_date_picker.dart';
 
 class AdvancedFilters extends StatefulWidget {
   final String? selectedCategory;
@@ -190,12 +191,11 @@ class _DateField extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        final date = await showDatePicker(
+        final date = await showCupertinoDateDialog(
           context: context,
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2020),
           lastDate: DateTime.now(),
-          locale: const Locale('pl', 'PL'),
         );
         onChanged(date);
       },

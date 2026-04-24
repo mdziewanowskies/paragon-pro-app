@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/utils/cupertino_date_picker.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
@@ -294,7 +295,7 @@ class _DatePickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        final d = await showDatePicker(
+        final d = await showCupertinoDateDialog(
           context: context,
           initialDate:
               value ?? DateTime.now().subtract(const Duration(days: 30)),

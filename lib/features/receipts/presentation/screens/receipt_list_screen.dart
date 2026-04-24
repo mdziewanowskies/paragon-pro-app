@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -181,31 +182,34 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     }
   }
 
-  Future<void> _deleteReceipt(ReceiptModel receipt) async {
-    final confirm = await showDialog<bool>(
+  Future<bool> _confirmDelete(ReceiptModel receipt) async {
+    final result = await showCupertinoModalPopup<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Usuń paragon'),
-        content: Text(
-          'Czy na pewno chcesz usunąć ${receipt.isKsefInvoice ? 'fakturę' : 'paragon'}'
-          '${receipt.merchantName != null ? ' z ${receipt.merchantName}' : ''}?'
-          '\n\nTej operacji nie można cofnąć.',
+      builder: (ctx) => CupertinoActionSheet(
+        title: Text(
+          'Usuń ${receipt.isKsefInvoice ? 'fakturę' : 'paragon'}'
+          '${receipt.merchantName != null ? ' z ${receipt.merchantName}' : ''}',
         ),
+        message: const Text('Tej operacji nie można cofnąć.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Anuluj'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Usuń'),
           ),
         ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Anuluj'),
+        ),
       ),
     );
+    return result ?? false;
+  }
 
-    if (confirm == true) {
+  Future<void> _deleteReceipt(ReceiptModel receipt) async {
+    final confirm = await _confirmDelete(receipt);
+    if (confirm) {
       await ref.read(receiptRepositoryProvider).deleteReceipt(receipt.id);
       _loadReceipts();
       _loadCounts();
@@ -585,7 +589,29 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       );
                     }
                     final receipt = _receipts[index];
-                    return ReceiptCard(
+                    return Dismissible(
+                      key: ValueKey(receipt.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 24),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.delete_rounded,
+                            color: Colors.white, size: 28),
+                      ),
+                      confirmDismiss: (_) => _confirmDelete(receipt),
+                      onDismissed: (_) {
+                        ref
+                            .read(receiptRepositoryProvider)
+                            .deleteReceipt(receipt.id);
+                        setState(() => _receipts.removeAt(index));
+                        _loadCounts();
+                      },
+                      child: ReceiptCard(
                       receipt: receipt,
                       currentUserId:
                           SupabaseService.auth.currentUser?.id,
@@ -594,6 +620,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       onDelete: () => _deleteReceipt(receipt),
                       onAddWarranty: () => _showWarrantyDialog(receipt),
                       onComplaint: () => _showComplaintDialog(receipt),
+                    ),
                     );
                   },
                   childCount: _receipts.length + (_hasMore ? 1 : 0),

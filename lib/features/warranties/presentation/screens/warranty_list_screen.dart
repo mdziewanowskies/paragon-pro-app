@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -93,14 +94,85 @@ class WarrantyListScreen extends ConsumerWidget {
             itemCount: list.length,
             itemBuilder: (context, index) {
               final warranty = list[index];
-              return WarrantyCard(
-                warranty: warranty,
-                onDelete: () async {
+              return Dismissible(
+                key: ValueKey(warranty.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 24),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.delete_rounded,
+                      color: Colors.white, size: 28),
+                ),
+                confirmDismiss: (_) async {
+                  final result =
+                      await showCupertinoModalPopup<bool>(
+                    context: context,
+                    builder: (ctx) => CupertinoActionSheet(
+                      title: Text(
+                          'Usuń gwarancję${warranty.merchantName != null ? ' — ${warranty.merchantName}' : ''}'),
+                      message: const Text(
+                          'Tej operacji nie można cofnąć.'),
+                      actions: [
+                        CupertinoActionSheetAction(
+                          isDestructiveAction: true,
+                          onPressed: () =>
+                              Navigator.pop(ctx, true),
+                          child: const Text('Usuń'),
+                        ),
+                      ],
+                      cancelButton: CupertinoActionSheetAction(
+                        onPressed: () =>
+                            Navigator.pop(ctx, false),
+                        child: const Text('Anuluj'),
+                      ),
+                    ),
+                  );
+                  return result ?? false;
+                },
+                onDismissed: (_) async {
                   await SupabaseService.client
                       .from('warranties')
                       .delete()
                       .eq('id', warranty.id);
                   ref.invalidate(warrantyListProvider);
+                },
+                child: WarrantyCard(
+                warranty: warranty,
+                onDelete: () async {
+                  final confirm =
+                      await showCupertinoModalPopup<bool>(
+                    context: context,
+                    builder: (ctx) => CupertinoActionSheet(
+                      title: const Text('Usuń gwarancję'),
+                      message: const Text(
+                          'Tej operacji nie można cofnąć.'),
+                      actions: [
+                        CupertinoActionSheetAction(
+                          isDestructiveAction: true,
+                          onPressed: () =>
+                              Navigator.pop(ctx, true),
+                          child: const Text('Usuń'),
+                        ),
+                      ],
+                      cancelButton: CupertinoActionSheetAction(
+                        onPressed: () =>
+                            Navigator.pop(ctx, false),
+                        child: const Text('Anuluj'),
+                      ),
+                    ),
+                  );
+                  if (confirm == true) {
+                    await SupabaseService.client
+                        .from('warranties')
+                        .delete()
+                        .eq('id', warranty.id);
+                    ref.invalidate(warrantyListProvider);
+                  }
                 },
                 onTestEmail: () async {
                   try {
@@ -123,6 +195,7 @@ class WarrantyListScreen extends ConsumerWidget {
                     }
                   }
                 },
+              ),
               );
             },
           ),
