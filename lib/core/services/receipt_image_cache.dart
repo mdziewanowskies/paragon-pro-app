@@ -70,12 +70,14 @@ class ReceiptImageCache {
 
     // Download and cache
     try {
+      debugPrint('Image fetch: $imageUrl');
       final response = await http.get(Uri.parse(imageUrl));
       if (response.statusCode == 200) {
         final path = await saveLocal(imageUrl, response.bodyBytes);
         return path;
       }
-      debugPrint('Image fetch failed: ${response.statusCode}');
+      debugPrint('Image fetch failed: ${response.statusCode} for $imageUrl');
+      debugPrint('Response body: ${response.body.substring(0, response.body.length.clamp(0, 200))}');
     } catch (e) {
       debugPrint('Image fetch error: $e');
     }
