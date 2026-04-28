@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'supabase_service.dart';
 
 class ReceiptImageCache {
   static String? _cacheDir;
@@ -68,16 +69,49 @@ class ReceiptImageCache {
       return localPath;
     }
 
-    // Download and cache
+    // Download and cache — try with auth token (private bucket)
     try {
       debugPrint('Image fetch: $imageUrl');
-      final response = await http.get(Uri.parse(imageUrl));
+
+      // Build auth headers from Supabase session
+      final session = SupabaseService.auth.currentSession;
+      final headers = <String, String>{};
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+        headers['apikey'] = SupabaseService.client.headers['apikey'] ?? '';
+      }
+
+      // Try authenticated request first
+      var response = await http.get(Uri.parse(imageUrl), headers: headers);
+
+      // If still fails, try converting public URL to authenticated download
+      if (response.statusCode != 200 && imageUrl.contains('/object/public/')) {
+        final authUrl = imageUrl.replaceFirst('/object/public/', '/object/authenticated/');
+        debugPrint('Retrying with authenticated URL: $authUrl');
+        response = await http.get(Uri.parse(authUrl), headers: headers);
+      }
+
+      // Last resort: try Supabase Storage download API
+      if (response.statusCode != 200 && imageUrl.contains('/receipts/')) {
+        try {
+          final storagePath = imageUrl.split('/receipts/').last;
+          debugPrint('Trying Supabase storage download: receipts/$storagePath');
+          final bytes = await SupabaseService.storage
+              .from('receipts')
+              .download(storagePath);
+          final path = await saveLocal(imageUrl, bytes);
+          return path;
+        } catch (storageError) {
+          debugPrint('Supabase storage download failed: $storageError');
+        }
+      }
+
       if (response.statusCode == 200) {
         final path = await saveLocal(imageUrl, response.bodyBytes);
         return path;
       }
       debugPrint('Image fetch failed: ${response.statusCode} for $imageUrl');
-      debugPrint('Response body: ${response.body.substring(0, response.body.length.clamp(0, 200))}');
+      debugPrint('Response: ${response.body.substring(0, response.body.length.clamp(0, 200))}');
     } catch (e) {
       debugPrint('Image fetch error: $e');
     }
