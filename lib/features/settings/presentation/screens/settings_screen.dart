@@ -124,16 +124,29 @@ class SettingsScreen extends ConsumerWidget {
                           onPressed: () async {
                             final granted =
                                 await NotificationService.requestPermission();
+                            debugPrint('Notification permission: $granted');
+                            if (!granted && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Brak uprawnień — włącz powiadomienia w Ustawieniach iPhone → ParagonPro → Powiadomienia'),
+                                  duration: Duration(seconds: 5),
+                                ),
+                              );
+                              return;
+                            }
                             await NotificationService.showInstant(
                               title: 'Test ParagonPro',
-                              body: 'Powiadomienia działają poprawnie!',
+                              body:
+                                  'Powiadomienia działają! Jeśli nie widzisz tego na lockscreenie — sprawdź Ustawienia → ParagonPro → Powiadomienia.',
                             );
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(granted
-                                        ? 'Wysłano testowe powiadomienie'
-                                        : 'Brak uprawnień — włącz powiadomienia w Ustawieniach systemu')),
+                                const SnackBar(
+                                  content: Text(
+                                      'Wysłano! Na symulatorze iOS powiadomienia mogą nie wyświetlać się na lockscreenie — sprawdź w centrum powiadomień (swipe down).'),
+                                  duration: Duration(seconds: 5),
+                                ),
                               );
                             }
                           },

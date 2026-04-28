@@ -104,13 +104,36 @@ final challengesProvider =
 
 final leaderboardProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final userId = SupabaseService.auth.currentUser?.id;
+  if (userId == null) return [];
+
+  // Get family member IDs (if any)
+  List<String> familyUserIds = [userId];
+  try {
+    final membership = await SupabaseService.client
+        .from('family_members')
+        .select('family_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+    if (membership != null) {
+      final familyId = membership['family_id'] as String;
+      final members = await SupabaseService.client
+          .from('family_members')
+          .select('user_id')
+          .eq('family_id', familyId);
+      familyUserIds = (members as List)
+          .map((m) => m['user_id'] as String)
+          .toList();
+    }
+  } catch (_) {}
+
+  // Fetch gamification data for family + self
   final data = await SupabaseService.client
       .from('user_gamification')
       .select('user_id, points, level, total_receipts')
-      .order('points', ascending: false)
-      .limit(20);
+      .inFilter('user_id', familyUserIds)
+      .order('points', ascending: false);
 
-  // Fetch usernames
   final userIds = (data as List).map((e) => e['user_id'] as String).toList();
   if (userIds.isEmpty) return [];
 

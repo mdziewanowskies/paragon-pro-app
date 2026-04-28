@@ -161,6 +161,19 @@ class NotificationService {
 
   // ─── Instant notification (KSeF, achievements) ───────────
 
+  /// Check if notification permission is granted
+  static Future<bool> isPermissionGranted() async {
+    if (!_initialized) await initialize();
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      debugPrint('Pending notifications: ${pending.length}');
+      return true;
+    } catch (e) {
+      debugPrint('Permission check failed: $e');
+      return false;
+    }
+  }
+
   static Future<void> showInstant({
     required String title,
     required String body,

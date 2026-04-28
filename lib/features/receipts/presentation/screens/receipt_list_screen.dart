@@ -37,6 +37,10 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   static const _pageSize = 15;
   int _lastRefreshSignal = 0;
 
+  // Multi-select
+  bool _selectMode = false;
+  final Set<String> _selectedIds = {};
+
   // Sub-tab filter
   ReceiptFilterType _filterType = ReceiptFilterType.all;
   Map<ReceiptFilterType, int> _counts = {
@@ -184,6 +188,41 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     }
   }
 
+  Future<void> _deleteSelected() async {
+    final count = _selectedIds.length;
+    final confirm = await showCupertinoModalPopup<bool>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: Text('Usuń $count ${count == 1 ? 'paragon' : count <= 4 ? 'paragony' : 'paragonów'}'),
+        message: const Text('Tej operacji nie można cofnąć.'),
+        actions: [
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Usuń $count'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Anuluj'),
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      HapticFeedback.mediumImpact();
+      for (final id in _selectedIds) {
+        await ref.read(receiptRepositoryProvider).deleteReceipt(id);
+      }
+      setState(() {
+        _selectMode = false;
+        _selectedIds.clear();
+      });
+      _loadReceipts();
+      _loadCounts();
+    }
+  }
+
   Future<bool> _confirmDelete(ReceiptModel receipt) async {
     final result = await showCupertinoModalPopup<bool>(
       context: context,
@@ -247,6 +286,60 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       child: CustomScrollView(
         controller: _scrollController,
         slivers: [
+          // Select mode bar
+          if (_selectMode)
+            SliverToBoxAdapter(
+              child: Container(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Text(
+                      'Zaznaczono: ${_selectedIds.length}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          if (_selectedIds.length == _receipts.length) {
+                            _selectedIds.clear();
+                          } else {
+                            _selectedIds.addAll(_receipts.map((r) => r.id));
+                          }
+                        });
+                      },
+                      child: Text(_selectedIds.length == _receipts.length
+                          ? 'Odznacz wszystkie'
+                          : 'Zaznacz wszystkie'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: _selectedIds.isEmpty
+                          ? null
+                          : () => _deleteSelected(),
+                      icon: const Icon(Icons.delete_rounded, size: 18),
+                      label: const Text('Usuń'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() {
+                        _selectMode = false;
+                        _selectedIds.clear();
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           // Search
           SliverToBoxAdapter(
             child: Padding(
@@ -488,6 +581,50 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => setState(() {
+                            _selectMode = !_selectMode;
+                            if (!_selectMode) _selectedIds.clear();
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _selectMode
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: _selectMode
+                                  ? null
+                                  : Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.checklist_rounded, size: 14,
+                                    color: _selectMode
+                                        ? Colors.white
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6)),
+                                const SizedBox(width: 4),
+                                Text('Zaznacz',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _selectMode
+                                          ? Colors.white
+                                          : null,
+                                    )),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -595,6 +732,53 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       );
                     }
                     final receipt = _receipts[index];
+                    final isSelected = _selectedIds.contains(receipt.id);
+
+                    if (_selectMode) {
+                      return Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (_) {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedIds.remove(receipt.id);
+                                } else {
+                                  _selectedIds.add(receipt.id);
+                                }
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                if (isSelected) {
+                                  _selectedIds.remove(receipt.id);
+                                } else {
+                                  _selectedIds.add(receipt.id);
+                                }
+                              }),
+                              child: Opacity(
+                                opacity: isSelected ? 1.0 : 0.7,
+                                child: ReceiptCard(
+                                  receipt: receipt,
+                                  currentUserId:
+                                      SupabaseService.auth.currentUser?.id,
+                                  onTap: () => setState(() {
+                                    if (isSelected) {
+                                      _selectedIds.remove(receipt.id);
+                                    } else {
+                                      _selectedIds.add(receipt.id);
+                                    }
+                                  }),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
                     return Dismissible(
                       key: ValueKey(receipt.id),
                       direction: DismissDirection.endToStart,
@@ -618,15 +802,17 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                         _loadCounts();
                       },
                       child: ReceiptCard(
-                      receipt: receipt,
-                      currentUserId:
-                          SupabaseService.auth.currentUser?.id,
-                      onTap: () => _showImagePreview(receipt),
-                      onEdit: () => _showEditDialog(receipt),
-                      onDelete: () => _deleteReceipt(receipt),
-                      onAddWarranty: () => _showWarrantyDialog(receipt),
-                      onComplaint: () => _showComplaintDialog(receipt),
-                    ),
+                        receipt: receipt,
+                        currentUserId:
+                            SupabaseService.auth.currentUser?.id,
+                        onTap: () => _showImagePreview(receipt),
+                        onEdit: () => _showEditDialog(receipt),
+                        onDelete: () => _deleteReceipt(receipt),
+                        onAddWarranty: () =>
+                            _showWarrantyDialog(receipt),
+                        onComplaint: () =>
+                            _showComplaintDialog(receipt),
+                      ),
                     );
                   },
                   childCount: _receipts.length + (_hasMore ? 1 : 0),

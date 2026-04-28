@@ -100,7 +100,7 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: Text('Faktura: $ksefNumber'),
+            title: Text('XML: $ksefNumber'),
             content: SingleChildScrollView(
               child: SelectableText(
                 result,
@@ -119,8 +119,11 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
       }
     } on KsefException catch (e) {
       if (mounted) {
+        final msg = e.message.contains('PDF')
+            ? 'KSeF nie udostępnia PDF — użyj eksportu XML w zakładce Raporty'
+            : 'Błąd: ${e.message}';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Błąd pobierania faktury: ${e.message}')),
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
         );
       }
     }
