@@ -1,60 +1,117 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'supabase_service.dart';
 
-// RevenueCat API keys — replace with your actual keys
-const _revenueCatAppleKey = String.fromEnvironment(
-  'REVENUECAT_APPLE_KEY',
-  defaultValue: 'appl_YOUR_REVENUECAT_APPLE_API_KEY',
-);
-const _revenueCatGoogleKey = String.fromEnvironment(
-  'REVENUECAT_GOOGLE_KEY',
-  defaultValue: 'goog_YOUR_REVENUECAT_GOOGLE_API_KEY',
-);
+const _revenueCatApiKey = 'test_NoVmdZvFeAgfvMQrhzdosZpdoLD';
 
-// Product identifiers (must match App Store Connect / Google Play Console)
-class SubscriptionProducts {
-  static const premiumMonthly = 'paragonpro_premium_monthly';
-  static const premiumYearly = 'paragonpro_premium_yearly';
-  static const familyMonthly = 'paragonpro_family_monthly';
-  static const familyYearly = 'paragonpro_family_yearly';
-
-  // Entitlement identifier in RevenueCat dashboard
-  static const premiumEntitlement = 'premium';
-  static const familyEntitlement = 'family';
-}
-
-class PurchaseService {
+class RevenueCatService {
   static bool _initialized = false;
+
+  // Entitlement ID from RevenueCat dashboard
+  static const entitlementId = 'ParagonPro Pro';
+
+  // ─── Initialize ──────────────────────────────────────────
 
   static Future<void> initialize() async {
     if (_initialized) return;
 
     try {
-      await Purchases.setLogLevel(LogLevel.debug);
+      if (kDebugMode) {
+        await Purchases.setLogLevel(LogLevel.debug);
+      }
 
-      final apiKey = defaultTargetPlatform == TargetPlatform.iOS
-          ? _revenueCatAppleKey
-          : _revenueCatGoogleKey;
-
-      // Link with Supabase user ID for webhook sync
       final userId = SupabaseService.auth.currentUser?.id;
 
-      final config = PurchasesConfiguration(apiKey);
+      final config = PurchasesConfiguration(_revenueCatApiKey);
       if (userId != null) {
         config..appUserID = userId;
       }
 
       await Purchases.configure(config);
       _initialized = true;
-      debugPrint('PurchaseService initialized');
+      debugPrint('RevenueCat initialized (user: $userId)');
+
+      // Listen for customer info changes
+      Purchases.addCustomerInfoUpdateListener((info) {
+        debugPrint('RevenueCat customer info updated');
+        _syncEntitlementToSupabase(info);
+      });
     } catch (e) {
-      debugPrint('PurchaseService init failed: $e');
+      debugPrint('RevenueCat init failed: $e');
     }
   }
 
-  // ─── Get offerings (prices, products) ─────────────────────
+  // ─── Login / Logout sync with Supabase auth ──────────────
+
+  static Future<void> loginUser(String userId) async {
+    if (!_initialized) await initialize();
+    try {
+      await Purchases.logIn(userId);
+      debugPrint('RevenueCat logged in: $userId');
+    } catch (e) {
+      debugPrint('RevenueCat login error: $e');
+    }
+  }
+
+  static Future<void> logoutUser() async {
+    try {
+      if (await Purchases.isAnonymous) return;
+      await Purchases.logOut();
+      debugPrint('RevenueCat logged out');
+    } catch (e) {
+      debugPrint('RevenueCat logout error: $e');
+    }
+  }
+
+  // ─── Entitlement check ───────────────────────────────────
+
+  static Future<bool> isProUser() async {
+    if (!_initialized) await initialize();
+    try {
+      final info = await Purchases.getCustomerInfo();
+      return info.entitlements.all[entitlementId]?.isActive ?? false;
+    } catch (e) {
+      debugPrint('isProUser error: $e');
+      return false;
+    }
+  }
+
+  static Future<SubscriptionStatus> getStatus() async {
+    if (!_initialized) await initialize();
+    try {
+      final info = await Purchases.getCustomerInfo();
+      final entitlement = info.entitlements.all[entitlementId];
+
+      if (entitlement?.isActive == true) {
+        // Determine tier from product ID
+        final productId = entitlement!.productIdentifier;
+        String tier = 'premium';
+        if (productId.contains('family')) tier = 'family';
+
+        return SubscriptionStatus(
+          tier: tier,
+          isActive: true,
+          productId: productId,
+          expirationDate: entitlement.expirationDate != null
+              ? DateTime.tryParse(entitlement.expirationDate!)
+              : null,
+          isTrial: entitlement.periodType == PeriodType.trial,
+          willRenew: entitlement.willRenew,
+          isLifetime: productId.contains('lifetime'),
+        );
+      }
+
+      return SubscriptionStatus.free();
+    } catch (e) {
+      debugPrint('getStatus error: $e');
+      return SubscriptionStatus.free();
+    }
+  }
+
+  // ─── Get offerings ───────────────────────────────────────
 
   static Future<Offerings?> getOfferings() async {
     if (!_initialized) await initialize();
@@ -66,141 +123,170 @@ class PurchaseService {
     }
   }
 
-  // ─── Purchase ─────────────────────────────────────────────
+  // ─── Purchase a package ──────────────────────────────────
 
   static Future<bool> purchase(Package package) async {
     try {
       await Purchases.purchasePackage(package);
       final info = await Purchases.getCustomerInfo();
-      final isPremium = info.entitlements.all[SubscriptionProducts.premiumEntitlement]?.isActive ?? false;
-      final isFamily = info.entitlements.all[SubscriptionProducts.familyEntitlement]?.isActive ?? false;
+      final isActive =
+          info.entitlements.all[entitlementId]?.isActive ?? false;
 
-      // Sync tier to Supabase
-      if (isPremium || isFamily) {
-        await _syncTierToSupabase(isFamily ? 'family' : 'premium');
+      if (isActive) {
+        await _syncEntitlementToSupabase(info);
       }
-
-      return isPremium || isFamily;
-    } on PurchasesErrorCode catch (e) {
-      if (e == PurchasesErrorCode.purchaseCancelledError) {
-        debugPrint('Purchase cancelled by user');
+      return isActive;
+    } on PlatformException catch (e) {
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        debugPrint('Purchase cancelled');
         return false;
       }
-      debugPrint('Purchase error: $e');
+      debugPrint('Purchase error: $errorCode — $e');
       rethrow;
     }
   }
 
-  // ─── Restore purchases ───────────────────────────────────
+  // ─── Restore purchases ──────────────────────────────────
 
   static Future<bool> restorePurchases() async {
     try {
       final info = await Purchases.restorePurchases();
-      final isPremium = info.entitlements.all[SubscriptionProducts.premiumEntitlement]?.isActive ?? false;
-      final isFamily = info.entitlements.all[SubscriptionProducts.familyEntitlement]?.isActive ?? false;
-
-      if (isPremium || isFamily) {
-        await _syncTierToSupabase(isFamily ? 'family' : 'premium');
-        return true;
-      }
-
-      await _syncTierToSupabase('free');
-      return false;
+      final isActive =
+          info.entitlements.all[entitlementId]?.isActive ?? false;
+      await _syncEntitlementToSupabase(info);
+      return isActive;
     } catch (e) {
       debugPrint('Restore error: $e');
       return false;
     }
   }
 
-  // ─── Check current entitlements ───────────────────────────
+  // ─── Show native RevenueCat paywall ──────────────────────
 
-  static Future<SubscriptionStatus> getStatus() async {
-    if (!_initialized) await initialize();
-
+  static Future<bool> showPaywall() async {
     try {
-      final info = await Purchases.getCustomerInfo();
-      final premium = info.entitlements.all[SubscriptionProducts.premiumEntitlement];
-      final family = info.entitlements.all[SubscriptionProducts.familyEntitlement];
+      final result = await RevenueCatUI.presentPaywall();
+      debugPrint('Paywall result: $result');
 
-      if (family?.isActive == true) {
-        return SubscriptionStatus(
-          tier: 'family',
-          isActive: true,
-          expirationDate: family?.expirationDate != null
-              ? DateTime.tryParse(family!.expirationDate!)
-              : null,
-          isTrial: family?.periodType == PeriodType.trial,
-          willRenew: family?.willRenew ?? false,
-        );
+      if (result == PaywallResult.purchased ||
+          result == PaywallResult.restored) {
+        final info = await Purchases.getCustomerInfo();
+        await _syncEntitlementToSupabase(info);
+        return true;
       }
-
-      if (premium?.isActive == true) {
-        return SubscriptionStatus(
-          tier: 'premium',
-          isActive: true,
-          expirationDate: premium?.expirationDate != null
-              ? DateTime.tryParse(premium!.expirationDate!)
-              : null,
-          isTrial: premium?.periodType == PeriodType.trial,
-          willRenew: premium?.willRenew ?? false,
-        );
-      }
-
-      return SubscriptionStatus(tier: 'free', isActive: false);
+      return false;
     } catch (e) {
-      debugPrint('getStatus error: $e');
-      return SubscriptionStatus(tier: 'free', isActive: false);
+      debugPrint('showPaywall error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> showPaywallIfNeeded() async {
+    try {
+      final result = await RevenueCatUI.presentPaywallIfNeeded(entitlementId);
+      debugPrint('PaywallIfNeeded result: $result');
+      return result == PaywallResult.purchased ||
+          result == PaywallResult.restored;
+    } catch (e) {
+      debugPrint('showPaywallIfNeeded error: $e');
+      return false;
+    }
+  }
+
+  // ─── Show Customer Center (manage subscription) ──────────
+
+  static Future<void> showCustomerCenter() async {
+    try {
+      await RevenueCatUI.presentCustomerCenter();
+    } catch (e) {
+      debugPrint('CustomerCenter error: $e');
     }
   }
 
   // ─── Sync to Supabase ────────────────────────────────────
 
-  static Future<void> _syncTierToSupabase(String tier) async {
+  static Future<void> _syncEntitlementToSupabase(
+      CustomerInfo info) async {
     try {
       final userId = SupabaseService.auth.currentUser?.id;
       if (userId == null) return;
 
-      // Upsert user_subscriptions
+      final entitlement = info.entitlements.all[entitlementId];
+      String tier = 'free';
+
+      if (entitlement?.isActive == true) {
+        final productId = entitlement!.productIdentifier;
+        if (productId.contains('family')) {
+          tier = 'family';
+        } else {
+          tier = 'premium';
+        }
+      }
+
       await SupabaseService.client.from('user_subscriptions').upsert({
         'user_id': userId,
         'tier': tier,
         'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'user_id');
 
-      debugPrint('Synced tier "$tier" to Supabase');
+      debugPrint('Synced tier "$tier" to Supabase for $userId');
     } catch (e) {
       debugPrint('Sync tier error: $e');
     }
   }
 }
 
+// ─── Data class ─────────────────────────────────────────────
+
 class SubscriptionStatus {
   final String tier;
   final bool isActive;
+  final String? productId;
   final DateTime? expirationDate;
   final bool isTrial;
   final bool willRenew;
+  final bool isLifetime;
 
   SubscriptionStatus({
     required this.tier,
     required this.isActive,
+    this.productId,
     this.expirationDate,
     this.isTrial = false,
     this.willRenew = false,
+    this.isLifetime = false,
   });
 
+  factory SubscriptionStatus.free() =>
+      SubscriptionStatus(tier: 'free', isActive: false);
+
   bool get isFree => tier == 'free';
-  bool get isPremium => tier == 'premium' || tier == 'family';
+  bool get isPremium => isActive;
   bool get isFamily => tier == 'family';
+
+  String get tierLabel {
+    if (isLifetime) return 'Lifetime';
+    if (isTrial) return 'Trial';
+    switch (tier) {
+      case 'premium':
+        return 'Premium';
+      case 'family':
+        return 'Rodzinny';
+      default:
+        return 'Darmowy';
+    }
+  }
 }
 
 // ─── Riverpod providers ─────────────────────────────────────
 
-final purchaseStatusProvider =
+final revenueCatStatusProvider =
     FutureProvider<SubscriptionStatus>((ref) async {
-  return await PurchaseService.getStatus();
+  return await RevenueCatService.getStatus();
 });
 
-final offeringsProvider = FutureProvider<Offerings?>((ref) async {
-  return await PurchaseService.getOfferings();
+final revenueCatOfferingsProvider =
+    FutureProvider<Offerings?>((ref) async {
+  return await RevenueCatService.getOfferings();
 });

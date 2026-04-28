@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/purchase_service.dart';
@@ -14,20 +15,39 @@ class PaywallScreen extends ConsumerStatefulWidget {
 }
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
-  bool _isYearly = false;
   bool _isPurchasing = false;
-  String? _purchasingId;
 
-  Future<void> _purchase(Package package) async {
-    setState(() {
-      _isPurchasing = true;
-      _purchasingId = package.identifier;
-    });
+  @override
+  void initState() {
+    super.initState();
+    // Try showing native RevenueCat paywall first
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryNativePaywall());
+  }
 
+  Future<void> _tryNativePaywall() async {
     try {
-      final success = await PurchaseService.purchase(package);
+      final purchased = await RevenueCatService.showPaywall();
+      if (purchased && mounted) {
+        ref.invalidate(revenueCatStatusProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subskrypcja aktywowana!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.go('/');
+      }
+    } catch (e) {
+      debugPrint('Native paywall failed, showing custom: $e');
+    }
+  }
+
+  Future<void> _purchasePackage(Package package) async {
+    setState(() => _isPurchasing = true);
+    try {
+      final success = await RevenueCatService.purchase(package);
       if (success && mounted) {
-        ref.invalidate(purchaseStatusProvider);
+        ref.invalidate(revenueCatStatusProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Subskrypcja aktywowana! Dziękujemy!'),
@@ -36,28 +56,26 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         );
         context.go('/');
       }
-    } catch (e) {
+    } on PlatformException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Błąd: $e')),
-        );
+        final code = PurchasesErrorHelper.getErrorCode(e);
+        if (code != PurchasesErrorCode.purchaseCancelledError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Błąd zakupu: ${e.message}')),
+          );
+        }
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isPurchasing = false;
-          _purchasingId = null;
-        });
-      }
+      if (mounted) setState(() => _isPurchasing = false);
     }
   }
 
   Future<void> _restore() async {
     setState(() => _isPurchasing = true);
     try {
-      final restored = await PurchaseService.restorePurchases();
+      final restored = await RevenueCatService.restorePurchases();
       if (mounted) {
-        ref.invalidate(purchaseStatusProvider);
+        ref.invalidate(revenueCatStatusProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(restored
@@ -70,7 +88,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Błąd przywracania: $e')),
+          SnackBar(content: Text('Błąd: $e')),
         );
       }
     } finally {
@@ -80,8 +98,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final offerings = ref.watch(offeringsProvider);
-    final status = ref.watch(purchaseStatusProvider);
+    final offerings = ref.watch(revenueCatOfferingsProvider);
+    final status = ref.watch(revenueCatStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -89,7 +107,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => context.go('/'),
         ),
-        title: const Text('Wybierz plan'),
+        title: const Text('ParagonPro Pro'),
         actions: [
           TextButton(
             onPressed: _isPurchasing ? null : _restore,
@@ -99,154 +117,61 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       ),
       body: offerings.when(
         loading: () => const LoadingSpinner(),
-        error: (e, _) => _buildFallbackPricing(status.value),
+        error: (_, __) => _buildFallback(),
         data: (data) {
-          if (data == null || data.current == null) {
-            return _buildFallbackPricing(status.value);
-          }
-
-          final offering = data.current!;
-          return _buildPaywall(offering, status.value);
+          if (data?.current == null) return _buildFallback();
+          return _buildCustomPaywall(
+              data!.current!, status.value);
         },
       ),
     );
   }
 
-  Widget _buildPaywall(Offering offering, SubscriptionStatus? currentStatus) {
-    // Find packages
-    Package? premiumMonthly;
-    Package? premiumYearly;
-    Package? familyMonthly;
-    Package? familyYearly;
-
-    for (final pkg in offering.availablePackages) {
-      final id = pkg.storeProduct.identifier;
-      if (id.contains('premium') && id.contains('yearly')) {
-        premiumYearly = pkg;
-      } else if (id.contains('premium')) {
-        premiumMonthly = pkg;
-      } else if (id.contains('family') && id.contains('yearly')) {
-        familyYearly = pkg;
-      } else if (id.contains('family')) {
-        familyMonthly = pkg;
-      }
-    }
+  Widget _buildCustomPaywall(
+      Offering offering, SubscriptionStatus? currentStatus) {
+    // Sort packages: lifetime first, then yearly, monthly
+    final packages = List<Package>.from(offering.availablePackages);
+    packages.sort((a, b) {
+      const order = {
+        PackageType.lifetime: 0,
+        PackageType.annual: 1,
+        PackageType.monthly: 2,
+      };
+      return (order[a.packageType] ?? 3)
+          .compareTo(order[b.packageType] ?? 3);
+    });
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Trial banner
+          // Hero
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: AppColors.heroGradient,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                const Icon(Icons.star_rounded, color: Colors.amber, size: 32),
-                const SizedBox(height: 8),
+                const Icon(Icons.workspace_premium_rounded,
+                    color: Colors.amber, size: 40),
+                const SizedBox(height: 12),
                 const Text(
-                  '7 dni za darmo',
+                  'ParagonPro Pro',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
-                  'Wypróbuj Premium bez zobowiązań. Anuluj kiedy chcesz.',
+                  '7 dni za darmo • Anuluj kiedy chcesz',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Period toggle
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isYearly = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: !_isYearly
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'Miesięcznie',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: !_isYearly ? Colors.white : null,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isYearly = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _isYearly
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Rocznie',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: _isYearly ? Colors.white : null,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.amber,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              '-17%',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    fontSize: 15,
                   ),
                 ),
               ],
@@ -254,109 +179,91 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Premium plan
-          _PlanCard(
-            title: 'Premium',
-            price: _isYearly
-                ? (premiumYearly?.storeProduct.priceString ?? '290 zł/rok')
-                : (premiumMonthly?.storeProduct.priceString ?? '29 zł/mies'),
-            period: _isYearly ? '/rok' : '/miesiąc',
-            features: const [
-              '100 paragonów/miesiąc',
-              'Zaawansowane OCR AI',
-              'Pełna analityka',
-              'Integracja KSeF',
-              'Eksport PDF/CSV/XML',
-              'Priorytetowe wsparcie',
-            ],
-            trial: '7 dni za darmo',
-            isPopular: true,
-            isCurrent: currentStatus?.tier == 'premium',
-            isLoading: _isPurchasing &&
-                (_purchasingId ==
-                    (_isYearly
-                        ? premiumYearly?.identifier
-                        : premiumMonthly?.identifier)),
-            onSelect: () {
-              final pkg = _isYearly ? premiumYearly : premiumMonthly;
-              if (pkg != null) _purchase(pkg);
-            },
-          ),
-          const SizedBox(height: 14),
+          // Features
+          ...[
+            _Feature(Icons.receipt_long_rounded, 'Nielimitowane paragony'),
+            _Feature(Icons.auto_awesome, 'Zaawansowane OCR AI'),
+            _Feature(Icons.description_rounded, 'Pełna integracja KSeF'),
+            _Feature(Icons.analytics_rounded, 'Zaawansowana analityka'),
+            _Feature(Icons.picture_as_pdf_rounded, 'Eksport PDF/CSV/XML'),
+            _Feature(Icons.family_restroom_rounded,
+                'Konto rodzinne (do 5 osób)'),
+            _Feature(Icons.support_agent_rounded, 'Priorytetowe wsparcie'),
+          ],
+          const SizedBox(height: 24),
 
-          // Family plan
-          _PlanCard(
-            title: 'Rodzinny',
-            price: _isYearly
-                ? (familyYearly?.storeProduct.priceString ?? '490 zł/rok')
-                : (familyMonthly?.storeProduct.priceString ?? '49 zł/mies'),
-            period: _isYearly ? '/rok' : '/miesiąc',
-            features: const [
-              'Wszystko z Premium',
-              '500 paragonów/miesiąc',
-              'Wspólne konto rodzinne',
-              'Do 5 członków rodziny',
-              'Statystyki rodzinne',
-            ],
-            trial: '7 dni za darmo',
-            isCurrent: currentStatus?.tier == 'family',
-            isLoading: _isPurchasing &&
-                (_purchasingId ==
-                    (_isYearly
-                        ? familyYearly?.identifier
-                        : familyMonthly?.identifier)),
-            onSelect: () {
-              final pkg = _isYearly ? familyYearly : familyMonthly;
-              if (pkg != null) _purchase(pkg);
-            },
-          ),
-          const SizedBox(height: 20),
+          // Packages
+          ...packages.map((pkg) {
+            final product = pkg.storeProduct;
+            final isLifetime =
+                pkg.packageType == PackageType.lifetime;
+            final isYearly = pkg.packageType == PackageType.annual;
 
-          // Free plan info
-          if (currentStatus?.isFree == true)
-            Text(
-              'Aktualnie korzystasz z planu Darmowego (10 paragonów/miesiąc)',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5),
+            String label;
+            String? badge;
+            if (isLifetime) {
+              label = 'Na zawsze';
+              badge = 'Najlepsza wartość';
+            } else if (isYearly) {
+              label = 'Rocznie';
+              badge = 'Oszczędzasz 17%';
+            } else {
+              label = 'Miesięcznie';
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _PackageCard(
+                label: label,
+                price: product.priceString,
+                badge: badge,
+                isHighlighted: isYearly,
+                isLoading: _isPurchasing,
+                isCurrent: currentStatus?.productId ==
+                    product.identifier,
+                onTap: () => _purchasePackage(pkg),
               ),
-              textAlign: TextAlign.center,
-            ),
-
+            );
+          }),
           const SizedBox(height: 12),
+
+          // Manage subscription
+          if (currentStatus?.isActive == true)
+            OutlinedButton(
+              onPressed: () => RevenueCatService.showCustomerCenter(),
+              child: const Text('Zarządzaj subskrypcją'),
+            ),
+
           // Trial info
           if (currentStatus?.isTrial == true)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border:
-                    Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.timer_rounded,
-                      color: Colors.amber, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Jesteś w okresie próbnym. Subskrypcja zacznie się po 7 dniach.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.amber.shade700,
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.timer_rounded,
+                        color: Colors.amber, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Okres próbny aktywny — subskrypcja zacznie się po 7 dniach',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.amber),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          const SizedBox(height: 8),
 
-          // Legal
+          const SizedBox(height: 16),
           Text(
             'Subskrypcja odnawia się automatycznie. Możesz anulować w dowolnym momencie w ustawieniach App Store / Google Play.',
             style: TextStyle(
@@ -374,39 +281,67 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
-  /// Fallback when RevenueCat not configured / offline
-  Widget _buildFallbackPricing(SubscriptionStatus? status) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey),
-          const SizedBox(height: 12),
-          const Text(
-            'Nie udało się pobrać planów cenowych',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sprawdź połączenie z internetem i spróbuj ponownie.',
-            style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+  Widget _buildFallback() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Nie udało się załadować planów',
+              style:
+                  TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => ref.invalidate(offeringsProvider),
-            child: const Text('Ponów'),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: _restore,
-            child: const Text('Przywróć zakupy'),
+            const SizedBox(height: 8),
+            const Text('Sprawdź połączenie i spróbuj ponownie'),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                ref.invalidate(revenueCatOfferingsProvider);
+              },
+              child: const Text('Ponów'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _restore,
+              child: const Text('Przywróć zakupy'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () async {
+                await RevenueCatService.showPaywall();
+              },
+              child: const Text('Otwórz natywny paywall'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Feature extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _Feature(this.icon, this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w500)),
           ),
         ],
       ),
@@ -414,145 +349,128 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 }
 
-class _PlanCard extends StatelessWidget {
-  final String title;
+class _PackageCard extends StatelessWidget {
+  final String label;
   final String price;
-  final String period;
-  final List<String> features;
-  final String? trial;
-  final bool isPopular;
-  final bool isCurrent;
+  final String? badge;
+  final bool isHighlighted;
   final bool isLoading;
-  final VoidCallback? onSelect;
+  final bool isCurrent;
+  final VoidCallback onTap;
 
-  const _PlanCard({
-    required this.title,
+  const _PackageCard({
+    required this.label,
     required this.price,
-    required this.period,
-    required this.features,
-    this.trial,
-    this.isPopular = false,
-    this.isCurrent = false,
+    this.badge,
+    this.isHighlighted = false,
     this.isLoading = false,
-    this.onSelect,
+    this.isCurrent = false,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isPopular
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: isPopular ? 2 : 1,
+    return GestureDetector(
+      onTap: isCurrent || isLoading ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isHighlighted
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
+            width: isHighlighted ? 2 : 1,
+          ),
+          color: isHighlighted
+              ? Theme.of(context)
+                  .colorScheme
+                  .primary
+                  .withValues(alpha: 0.06)
+              : null,
         ),
-        color: Theme.of(context).colorScheme.surface,
-      ),
-      child: Column(
-        children: [
-          if (isPopular)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(14),
-                  topRight: Radius.circular(14),
-                ),
-              ),
-              child: const Text(
-                'Najpopularniejszy',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).colorScheme.primary,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                if (trial != null) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      trial!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.amber,
-                      ),
+                      if (badge != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            badge!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    price,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                ...features.map((f) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle,
-                              color: Colors.green, size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                              child: Text(f,
-                                  style: const TextStyle(fontSize: 14))),
-                        ],
-                      ),
-                    )),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: isCurrent
-                      ? OutlinedButton(
-                          onPressed: null,
-                          child: const Text('Aktualny plan'),
-                        )
-                      : ElevatedButton(
-                          onPressed: isLoading ? null : onSelect,
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2))
-                              : Text(trial != null
-                                  ? 'Wypróbuj za darmo'
-                                  : 'Wybierz'),
-                        ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            if (isCurrent)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Aktywny',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.green,
+                  ),
+                ),
+              )
+            else if (isLoading)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(Icons.chevron_right,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3)),
+          ],
+        ),
       ),
     );
   }

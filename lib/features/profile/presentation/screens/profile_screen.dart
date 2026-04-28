@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/profile_service.dart';
-import '../../../../core/services/subscription_service.dart';
+import '../../../../core/services/purchase_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
 import '../../../ksef/presentation/widgets/ksef_settings.dart';
@@ -97,7 +97,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
-    final subscription = ref.watch(subscriptionProvider);
+    final subscription = ref.watch(revenueCatStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -134,58 +134,90 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.workspace_premium_rounded,
-                                  size: 20),
+                              Icon(
+                                sub.isPremium
+                                    ? Icons.workspace_premium_rounded
+                                    : Icons.card_membership_rounded,
+                                size: 20,
+                                color: sub.isPremium
+                                    ? Colors.amber
+                                    : null,
+                              ),
                               const SizedBox(width: 8),
                               Text(
-                                sub.tier == 'free'
-                                    ? 'Plan Darmowy'
-                                    : sub.tier == 'premium'
-                                        ? 'Plan Premium'
-                                        : 'Plan Rodzinny',
+                                'Plan ${sub.tierLabel}',
                                 style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700),
                               ),
+                              if (sub.isTrial) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber
+                                        .withValues(alpha: 0.15),
+                                    borderRadius:
+                                        BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'Trial',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Paragony w tym miesiącu',
-                                  style: TextStyle(fontSize: 13)),
-                              Text(
-                                sub.isUnlimited
-                                    ? '${sub.currentMonthReceipts} (∞)'
-                                    : '${sub.currentMonthReceipts} / ${sub.maxReceiptsPerMonth}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13),
-                              ),
-                            ],
-                          ),
-                          if (!sub.isUnlimited) ...[
-                            const SizedBox(height: 6),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: sub.usagePercentage.clamp(0, 1),
-                                minHeight: 6,
+                          if (sub.expirationDate != null &&
+                              !sub.isLifetime) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              sub.willRenew
+                                  ? 'Odnawia się: ${sub.expirationDate!.day}.${sub.expirationDate!.month}.${sub.expirationDate!.year}'
+                                  : 'Wygasa: ${sub.expirationDate!.day}.${sub.expirationDate!.month}.${sub.expirationDate!.year}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                           ],
-                          if (sub.isFree) ...[
-                            const SizedBox(height: 12),
+                          if (sub.isLifetime) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Subskrypcja dożywotnia',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.green),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          if (sub.isFree)
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => context.go('/pricing'),
-                                child: const Text('Ulepsz do Premium'),
+                                onPressed: () =>
+                                    context.go('/pricing'),
+                                child:
+                                    const Text('Ulepsz do Pro'),
+                              ),
+                            )
+                          else
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => RevenueCatService
+                                    .showCustomerCenter(),
+                                child: const Text(
+                                    'Zarządzaj subskrypcją'),
                               ),
                             ),
-                          ],
                         ],
                       ),
                     ),
