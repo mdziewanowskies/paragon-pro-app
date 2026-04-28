@@ -59,7 +59,7 @@ class KsefRepository {
     try {
       final response = await SupabaseService.invokeFunction(
         'download-ksef-invoice',
-        body: {'ksefNumber': ksefNumber},
+        body: {'ksefNumber': ksefNumber, 'format': 'xml'},
       );
 
       debugPrint('KSeF download response: ${response.status}');

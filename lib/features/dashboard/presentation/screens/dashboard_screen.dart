@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
@@ -294,6 +295,35 @@ class _HomeTab extends ConsumerWidget {
                     ref.invalidate(gamificationDataProvider);
                   },
                 ),
+                const SizedBox(height: 20),
+
+                // ── Recent receipts ──
+                _SectionHeader(
+                  icon: Icons.receipt_long_rounded,
+                  title: 'Ostatnie paragony',
+                  actionLabel: 'Wszystkie',
+                  onAction: () {
+                    // Navigate to receipts tab via bottom nav
+                    final state = context.findAncestorStateOfType<_DashboardScreenState>();
+                    if (state != null && state.mounted) {
+                      // ignore: invalid_use_of_protected_member
+                      state.setState(() => state._currentTab = 1);
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                _RecentReceipts(),
+                const SizedBox(height: 20),
+
+                // ── Expiring warranties + Month summary ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _MonthSummary(stats: stats)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _KsefSummary()),
+                  ],
+                ),
                 const SizedBox(height: 80),
               ],
             ),
@@ -472,5 +502,263 @@ class _MoreTabState extends State<_MoreTab> {
         ),
       ],
     );
+  }
+}
+
+// ─── Section Header ─────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        const Spacer(),
+        if (actionLabel != null && onAction != null)
+          GestureDetector(
+            onTap: onAction,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(actionLabel!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.primary,
+                    )),
+                Icon(Icons.chevron_right,
+                    size: 18, color: Theme.of(context).colorScheme.primary),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Recent Receipts ────────────────────────────────────────
+
+class _RecentReceipts extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchRecent(),
+      builder: (context, snap) {
+        if (!snap.hasData || snap.data!.isEmpty) return const SizedBox.shrink();
+        final items = snap.data!;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: items.map((r) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          r['merchant_name'] as String? ?? 'Paragon',
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            Formatters.formatCurrency(
+                                (r['amount'] as num?)?.toDouble()),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          if (r['purchase_date'] != null)
+                            Text(
+                              Formatters.formatDate(
+                                  DateTime.tryParse(r['purchase_date'])),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.4),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchRecent() async {
+    final userId = SupabaseService.auth.currentUser?.id;
+    if (userId == null) return [];
+    try {
+      final data = await SupabaseService.client
+          .from('receipts')
+          .select('merchant_name, amount, purchase_date')
+          .eq('user_id', userId)
+          .eq('is_ksef_invoice', false)
+          .order('uploaded_at', ascending: false)
+          .limit(4);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (_) {
+      return [];
+    }
+  }
+}
+
+// ─── Month Summary ──────────────────────────────────────────
+
+class _MonthSummary extends StatelessWidget {
+  final AsyncValue<Map<String, dynamic>> stats;
+  const _MonthSummary({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.trending_up_rounded,
+                    size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 6),
+                const Text('Podsumowanie',
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            stats.when(
+              loading: () => const SizedBox(height: 40),
+              error: (_, __) => const Text('-'),
+              data: (data) {
+                final total = data['totalExpenses'] as double? ?? 0;
+                final count = data['receiptCount'] as int? ?? 0;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Formatters.formatCurrency(total),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    Text(
+                      '$count paragonów łącznie',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── KSeF Summary ───────────────────────────────────────────
+
+class _KsefSummary extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<int>(
+      future: _fetchKsefCount(),
+      builder: (context, snap) {
+        final count = snap.data ?? 0;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.description_rounded,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 6),
+                    const Text('Faktury KSeF',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                Text(
+                  'zsynchronizowanych',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<int> _fetchKsefCount() async {
+    final userId = SupabaseService.auth.currentUser?.id;
+    if (userId == null) return 0;
+    try {
+      final data = await SupabaseService.client
+          .from('receipts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_ksef_invoice', true);
+      return (data as List).length;
+    } catch (_) {
+      return 0;
+    }
   }
 }

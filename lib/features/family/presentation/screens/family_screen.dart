@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -28,8 +29,11 @@ final familyProvider =
       .select('user_id, role, joined_at')
       .eq('family_id', familyId);
 
+  debugPrint('=== Family members for $familyId ===');
+  debugPrint('Found ${(members as List).length} members: $members');
+
   // Fetch profiles separately for each member
-  final memberList = members as List;
+  final memberList = members;
   final userIds = memberList
       .map((m) => m['user_id'] as String)
       .toList();
