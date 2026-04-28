@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../shared/widgets/receipt_image.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../data/models/receipt_model.dart';
 
@@ -48,14 +48,9 @@ class ReceiptGridCard extends StatelessWidget {
                             ),
                           ),
                         )
-                      : CachedNetworkImage(
+                      : ReceiptImage(
                           imageUrl: receipt.imageUrl,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey[800],
-                            child: const Icon(Icons.receipt_long,
-                                size: 32, color: Colors.grey),
-                          ),
                         ),
                   // Badges
                   if (receipt.isKsefInvoice || receipt.aiProcessed)

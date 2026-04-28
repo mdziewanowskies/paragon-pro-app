@@ -2,7 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:io';
+import '../../../../core/services/receipt_image_cache.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -693,14 +694,44 @@ class _ReceiptPreviewDialog extends StatefulWidget {
 }
 
 class _ReceiptPreviewDialogState extends State<_ReceiptPreviewDialog> {
-  bool _imageLoadFailed = false;
+  String? _localPath;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  Future<void> _loadImage() async {
+    final path =
+        await ReceiptImageCache.getOrFetch(widget.receipt.imageUrl);
+    if (mounted) {
+      if (path == null) {
+        Navigator.pop(context);
+        showDialog(
+          context: context,
+          builder: (_) =>
+              KsefInvoicePreviewDialog(receipt: widget.receipt),
+        );
+      } else {
+        setState(() {
+          _localPath = path;
+          _loading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final receipt = widget.receipt;
 
-    if (_imageLoadFailed) {
-      return KsefInvoicePreviewDialog(receipt: receipt);
+    if (_loading) {
+      return const Dialog(
+        backgroundColor: Colors.transparent,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Dialog(
@@ -714,24 +745,9 @@ class _ReceiptPreviewDialogState extends State<_ReceiptPreviewDialog> {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
-                child: CachedNetworkImage(
-                  imageUrl: receipt.imageUrl,
+                child: Image.file(
+                  File(_localPath!),
                   fit: BoxFit.contain,
-                  placeholder: (_, __) => const SizedBox(
-                    width: 200,
-                    height: 300,
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (_, __, ___) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) setState(() => _imageLoadFailed = true);
-                    });
-                    return const SizedBox(
-                      width: 200,
-                      height: 300,
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  },
                 ),
               ),
             ),

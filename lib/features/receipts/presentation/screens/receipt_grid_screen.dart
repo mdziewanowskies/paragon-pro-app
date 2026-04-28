@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:io';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/receipt_image_cache.dart';
 import '../widgets/ksef_invoice_preview.dart';
 import '../widgets/receipt_grid_card.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -270,9 +271,28 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
                   child: InteractiveViewer(
                     minScale: 0.5,
                     maxScale: 4.0,
-                    child: CachedNetworkImage(
-                      imageUrl: receipt.imageUrl,
-                      fit: BoxFit.contain,
+                    child: FutureBuilder<String?>(
+                      future: ReceiptImageCache.getOrFetch(
+                          receipt.imageUrl),
+                      builder: (ctx, snap) {
+                        if (snap.connectionState !=
+                            ConnectionState.done) {
+                          return const SizedBox(
+                            width: 200,
+                            height: 300,
+                            child: Center(
+                                child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (snap.data == null) {
+                          return const Icon(Icons.broken_image,
+                              size: 64, color: Colors.grey);
+                        }
+                        return Image.file(
+                          File(snap.data!),
+                          fit: BoxFit.contain,
+                        );
+                      },
                     ),
                   ),
                 ),

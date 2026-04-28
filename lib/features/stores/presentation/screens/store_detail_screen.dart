@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/services/receipt_image_cache.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/polish_plurals.dart';
@@ -193,7 +195,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 child: InteractiveViewer(
                   minScale: 0.5,
                   maxScale: 4.0,
-                  child: CachedNetworkImage(imageUrl: receipt.imageUrl),
+                  child: FutureBuilder<String?>(
+                    future: ReceiptImageCache.getOrFetch(receipt.imageUrl),
+                    builder: (ctx, snap) {
+                      if (snap.data == null) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return Image.file(File(snap.data!), fit: BoxFit.contain);
+                    },
+                  ),
                 ),
               ),
               Positioned(

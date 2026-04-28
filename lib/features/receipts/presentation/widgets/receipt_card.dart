@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../shared/widgets/receipt_image.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../data/models/receipt_model.dart';
 
@@ -51,20 +51,9 @@ class ReceiptCard extends StatelessWidget {
                       width: double.infinity,
                       child: receipt.isKsefWithoutImage
                           ? _KsefPlaceholder()
-                          : CachedNetworkImage(
+                          : ReceiptImage(
                               imageUrl: receipt.imageUrl,
                               fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(
-                                color: Theme.of(context).colorScheme.surface,
-                                child: const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              ),
-                              errorWidget: (_, __, ___) => Container(
-                                color: Theme.of(context).colorScheme.surface,
-                                child: const Icon(Icons.receipt_long,
-                                    size: 48, color: Colors.grey),
-                              ),
                             ),
                     ),
                     // Badges row (top right)

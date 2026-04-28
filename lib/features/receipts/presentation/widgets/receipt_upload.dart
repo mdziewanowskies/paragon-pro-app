@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/receipt_image_cache.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/merchant_normalizer.dart';
 import '../../../../core/services/storage_service.dart';
@@ -89,6 +90,9 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
         userId: userId,
         fileBytes: bytes,
       );
+
+      // Cache locally so we don't re-download
+      await ReceiptImageCache.saveLocal(publicUrl, bytes);
 
       // Analyze with AI
       Map<String, dynamic> receiptData = {
