@@ -214,9 +214,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           const SizedBox(height: 8),
           if (_isYearly)
             Text(
-              yearly != null
-                  ? 'to tylko ${(yearly.storeProduct.price / 12).toStringAsFixed(2)} zł/miesiąc'
-                  : 'to tylko 15,00 zł/miesiąc',
+              'to tylko 15,00 zł/miesiąc',
               style: TextStyle(
                 fontSize: 13,
                 color: Theme.of(context)
