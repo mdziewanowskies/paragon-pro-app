@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -73,9 +74,15 @@ class KsefRepository {
       final error = data['error'] as String?;
       if (error != null) throw KsefException(error);
 
+      // Decode base64 XML if present
+      final base64Data = data['base64'] as String?;
+      if (base64Data != null) {
+        return utf8.decode(base64Decode(base64Data));
+      }
+
       return data['url'] as String? ??
           data['xml'] as String? ??
-          data['pdf'] as String?;
+          data['content'] as String?;
     } on FunctionException catch (e) {
       throw _parseFunctionException(e, 'pobierania faktury');
     } catch (e) {

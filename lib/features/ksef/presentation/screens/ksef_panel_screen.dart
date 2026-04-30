@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/cupertino_date_picker.dart';
@@ -97,25 +101,23 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
       final result = await ksefRepo.downloadInvoice(ksefNumber);
 
       if (mounted && result != null) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text('XML: $ksefNumber'),
-            content: SingleChildScrollView(
-              child: SelectableText(
-                result,
-                style: const TextStyle(
-                    fontSize: 11, fontFamily: 'monospace'),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Zamknij'),
-              ),
-            ],
-          ),
+        // Save XML to temp file and share
+        final dir = await getTemporaryDirectory();
+        final safeNumber = ksefNumber.replaceAll(RegExp(r'[^\w\-]'), '_');
+        final file = File('${dir.path}/faktura_$safeNumber.xml');
+        await file.writeAsString(result, encoding: utf8);
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: 'Faktura KSeF: $ksefNumber',
         );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('XML faktury gotowy do udostępnienia')),
+          );
+        }
+        return;
       }
     } on KsefException catch (e) {
       if (mounted) {
