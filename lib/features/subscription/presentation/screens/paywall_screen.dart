@@ -17,6 +17,14 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   bool _isPurchasing = false;
   bool _isYearly = true;
 
+  String _formatPrice(Package? pkg, String fallback) {
+    if (pkg == null) return fallback;
+    final price = pkg.storeProduct.priceString;
+    // If store returns PLN price, use it; otherwise show our fallback
+    if (price.contains('zł') || price.contains('PLN')) return price;
+    return fallback;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -188,13 +196,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 children: [
                   _PlanTab(
                     label: 'Miesięcznie',
-                    price: monthly?.storeProduct.priceString ?? '19,99 zł',
+                    price: _formatPrice(monthly, '19,99 zł'),
                     isSelected: !_isYearly,
                     onTap: () => setState(() => _isYearly = false),
                   ),
                   _PlanTab(
                     label: 'Rocznie',
-                    price: yearly?.storeProduct.priceString ?? '179,99 zł',
+                    price: _formatPrice(yearly, '179,99 zł'),
                     badge: '-20%',
                     isSelected: _isYearly,
                     onTap: () => setState(() => _isYearly = true),
@@ -206,7 +214,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           const SizedBox(height: 8),
           if (_isYearly)
             Text(
-              'to tylko 15,00 zł/miesiąc',
+              yearly != null
+                  ? 'to tylko ${(yearly.storeProduct.price / 12).toStringAsFixed(2)} zł/miesiąc'
+                  : 'to tylko 15,00 zł/miesiąc',
               style: TextStyle(
                 fontSize: 13,
                 color: Theme.of(context)
