@@ -10,6 +10,7 @@ import '../../../receipts/data/models/receipt_model.dart';
 import '../../../receipts/data/receipt_repository.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../../core/utils/share_helper.dart';
 import 'dart:io';
 
 class AdvancedExport extends ConsumerStatefulWidget {
@@ -80,10 +81,10 @@ class _AdvancedExportState extends ConsumerState<AdvancedExport> {
       final file = File('${dir.path}/$fileName');
       await file.writeAsString(csvContent, encoding: utf8);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Eksport ParagonPro CSV',
-      );
+      if (context.mounted) {
+        await shareFiles(context, [XFile(file.path)],
+            subject: 'Eksport ParagonPro CSV');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -264,8 +265,10 @@ class _AdvancedExportState extends ConsumerState<AdvancedExport> {
       final pdfDir = await getTemporaryDirectory();
       final pdfFile = File('${pdfDir.path}/$pdfFileName');
       await pdfFile.writeAsBytes(pdfBytes);
-      await Share.shareXFiles([XFile(pdfFile.path)],
-          subject: 'Raport ParagonPro');
+      if (context.mounted) {
+        await shareFiles(context, [XFile(pdfFile.path)],
+            subject: 'Raport ParagonPro');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -366,10 +369,10 @@ class _AdvancedExportState extends ConsumerState<AdvancedExport> {
       final file = File('${dir.path}/$fileName');
       await file.writeAsString(xmlContent, encoding: utf8);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Eksport KSeF XML',
-      );
+      if (context.mounted) {
+        await shareFiles(context, [XFile(file.path)],
+            subject: 'Eksport KSeF XML');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

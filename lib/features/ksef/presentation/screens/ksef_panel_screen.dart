@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/share_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/cupertino_date_picker.dart';
@@ -107,10 +108,8 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
         final file = File('${dir.path}/faktura_$safeNumber.xml');
         await file.writeAsString(result, encoding: utf8);
 
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: 'Faktura KSeF: $ksefNumber',
-        );
+        await shareFiles(context, [XFile(file.path)],
+            subject: 'Faktura KSeF: $ksefNumber');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

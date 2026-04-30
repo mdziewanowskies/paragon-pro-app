@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/share_helper.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
@@ -226,7 +227,10 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/$fileName.pdf');
     await file.writeAsBytes(pdfBytes);
-    await Share.shareXFiles([XFile(file.path)], subject: 'Pismo reklamacyjne');
+    if (context.mounted) {
+      await shareFiles(context, [XFile(file.path)],
+          subject: 'Pismo reklamacyjne');
+    }
   }
 
   @override
