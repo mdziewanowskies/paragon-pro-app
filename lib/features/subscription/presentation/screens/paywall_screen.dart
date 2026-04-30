@@ -20,17 +20,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tryNativePaywall());
-  }
-
-  Future<void> _tryNativePaywall() async {
-    try {
-      final purchased = await RevenueCatService.showPaywall();
-      if (purchased && mounted) {
-        ref.invalidate(revenueCatStatusProvider);
-        context.go('/');
-      }
-    } catch (_) {}
   }
 
   Future<void> _purchasePackage(Package package) async {
@@ -242,7 +231,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                         if (pkg != null) {
                           _purchasePackage(pkg);
                         } else {
-                          RevenueCatService.showPaywall();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Produkty nie są jeszcze skonfigurowane w sklepie'),
+                            ),
+                          );
                         }
                       },
                 style: ElevatedButton.styleFrom(
