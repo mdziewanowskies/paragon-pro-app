@@ -46,10 +46,10 @@ class PricingScreen extends ConsumerWidget {
               price: '0 zł',
               period: '/miesiąc',
               features: const [
-                '10 paragonów/miesiąc',
+                '5 paragonów/miesiąc',
                 'Podstawowe OCR',
-                'Śledzenie gwarancji',
-                'Podstawowa analityka',
+                'Brak KSeF',
+                'Brak konta rodzinnego',
               ],
               isCurrent: currentTier == 'free',
               onSelect: null,
@@ -57,36 +57,19 @@ class PricingScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _PlanCard(
               title: 'Premium',
-              price: '29 zł',
+              price: '19,99 zł',
               period: '/miesiąc',
               features: const [
-                '100 paragonów/miesiąc',
+                'Nielimitowane paragony',
                 'Zaawansowane OCR AI',
-                'Pełna analityka',
-                'Integracja KSeF',
+                'Pełna integracja KSeF',
+                'Konto rodzinne',
+                'Zaawansowana analityka',
+                'Eksport PDF/CSV/XML',
                 'Priorytetowe wsparcie',
-                'Eksport PDF/CSV',
               ],
               isPopular: true,
               isCurrent: currentTier == 'premium',
-              onSelect: currentTier == 'premium'
-                  ? null
-                  : () => _checkout(context, 'premium'),
-            ),
-            const SizedBox(height: 16),
-            _PlanCard(
-              title: 'Rodzinny',
-              price: '49 zł',
-              period: '/miesiąc',
-              features: const [
-                '500 paragonów/miesiąc',
-                'Wszystko z Premium',
-                'Wspólne konto rodzinne',
-                'Do 5 członków rodziny',
-                'Statystyki rodzinne',
-                'Wspólne zarządzanie paragonami',
-              ],
-              isCurrent: currentTier == 'family',
               onSelect: currentTier == 'family'
                   ? null
                   : () => _checkout(context, 'family'),

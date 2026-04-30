@@ -64,7 +64,7 @@ class SubscriptionGate extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '$featureName jest dostępna w planie Premium lub Rodzinnym.',
+                '$featureName jest dostępna w planie Premium.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context)
                           .colorScheme

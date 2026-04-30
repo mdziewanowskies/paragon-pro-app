@@ -28,12 +28,12 @@ class SubscriptionInfo {
       ? currentMonthReceipts / maxReceiptsPerMonth
       : 0;
   bool get isFree => tier == 'free';
-  bool get isPremium => tier == 'premium' || tier == 'family';
+  bool get isPremium => tier == 'premium';
 
   factory SubscriptionInfo.free({int currentReceipts = 0}) {
     return SubscriptionInfo(
       tier: 'free',
-      maxReceiptsPerMonth: 10,
+      maxReceiptsPerMonth: 5,
       aiFeaturesEnabled: false,
       familySharingEnabled: false,
       advancedAnalytics: false,

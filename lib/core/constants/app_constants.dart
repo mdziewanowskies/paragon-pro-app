@@ -20,16 +20,14 @@ class AppConstants {
   // Subscription tiers
   static const String tierFree = 'free';
   static const String tierPremium = 'premium';
-  static const String tierFamily = 'family';
 
   // Limits
-  static const int freeMonthlyReceipts = 10;
-  static const int premiumMonthlyReceipts = 100;
-  static const int familyMonthlyReceipts = 500;
+  static const int freeMonthlyReceipts = 5;
+  static const int premiumMonthlyReceipts = -1; // unlimited
 
   // Pricing
-  static const double premiumPrice = 29.0;
-  static const double familyPrice = 49.0;
+  static const double premiumMonthlyPrice = 19.99;
+  static const double premiumYearlyPrice = 179.99;
 
   // Gamification
   static const int pointsPerLevel = 100;

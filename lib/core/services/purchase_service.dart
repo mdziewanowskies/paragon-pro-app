@@ -86,10 +86,8 @@ class RevenueCatService {
       final entitlement = info.entitlements.all[entitlementId];
 
       if (entitlement?.isActive == true) {
-        // Determine tier from product ID
         final productId = entitlement!.productIdentifier;
-        String tier = 'premium';
-        if (productId.contains('family')) tier = 'family';
+        const tier = 'premium';
 
         return SubscriptionStatus(
           tier: tier,
@@ -216,12 +214,7 @@ class RevenueCatService {
       String tier = 'free';
 
       if (entitlement?.isActive == true) {
-        final productId = entitlement!.productIdentifier;
-        if (productId.contains('family')) {
-          tier = 'family';
-        } else {
-          tier = 'premium';
-        }
+        tier = 'premium';
       }
 
       await SupabaseService.client.from('user_subscriptions').upsert({
@@ -263,16 +256,12 @@ class SubscriptionStatus {
 
   bool get isFree => tier == 'free';
   bool get isPremium => isActive;
-  bool get isFamily => tier == 'family';
-
   String get tierLabel {
     if (isLifetime) return 'Lifetime';
-    if (isTrial) return 'Trial';
+    if (isTrial) return 'Trial Premium';
     switch (tier) {
       case 'premium':
         return 'Premium';
-      case 'family':
-        return 'Rodzinny';
       default:
         return 'Darmowy';
     }
