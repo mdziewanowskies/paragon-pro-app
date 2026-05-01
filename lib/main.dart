@@ -1,8 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app/app.dart';
+import 'core/services/messaging_service.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/offline_sync_service.dart';
 import 'core/services/notification_service.dart';
@@ -27,6 +29,14 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Initialize Firebase (FCM)
+  try {
+    await Firebase.initializeApp();
+    await MessagingService.initialize();
+  } catch (e) {
+    debugPrint('Firebase init failed (non-blocking): $e');
+  }
 
   // Initialize Supabase
   await SupabaseService.initialize();
