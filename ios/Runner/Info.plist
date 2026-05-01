@@ -24,18 +24,18 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>NSCameraUsageDescription</key>
-	<string>ParagonPro potrzebuje dostępu do aparatu, aby skanować paragony i faktury.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ParagonPro potrzebuje dostępu do galerii, aby dodawać zdjęcia paragonów.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>ParagonPro zapisuje wygenerowane dokumenty (pisma reklamacyjne, raporty) w galerii.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Mikrofon nie jest używany przez aplikację.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>ParagonPro używa sieci lokalnej do synchronizacji danych.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>ParagonPro potrzebuje dostępu do aparatu, aby skanować paragony i faktury.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>ParagonPro używa sieci lokalnej do synchronizacji danych.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon nie jest używany przez aplikację.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ParagonPro zapisuje wygenerowane dokumenty (pisma reklamacyjne, raporty) w galerii.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ParagonPro potrzebuje dostępu do galerii, aby dodawać zdjęcia paragonów.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
