@@ -249,18 +249,29 @@ class RevenueCatService {
 
       final entitlement = info.entitlements.all[entitlementId];
       String tier = 'free';
+      String? periodEnd;
 
       if (entitlement?.isActive == true) {
         tier = 'premium';
+        periodEnd = entitlement?.expirationDate;
       }
 
-      await SupabaseService.client.from('user_subscriptions').upsert({
+      final data = <String, dynamic>{
         'user_id': userId,
         'tier': tier,
         'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'user_id');
+      };
 
-      debugPrint('Synced tier "$tier" to Supabase for $userId');
+      // Sync expiration so web knows when subscription renews
+      if (periodEnd != null) {
+        data['current_period_end'] = periodEnd;
+      }
+
+      await SupabaseService.client
+          .from('user_subscriptions')
+          .upsert(data, onConflict: 'user_id');
+
+      debugPrint('Synced tier "$tier" to Supabase for $userId (expires: $periodEnd)');
     } catch (e) {
       debugPrint('Sync tier error: $e');
     }
