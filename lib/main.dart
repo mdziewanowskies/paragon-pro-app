@@ -37,8 +37,12 @@ void main() async {
   // Initialize notifications
   await NotificationService.initialize();
 
-  // Initialize in-app purchases (RevenueCat)
-  await RevenueCatService.initialize();
+  // Initialize in-app purchases (RevenueCat) — non-blocking
+  try {
+    await RevenueCatService.initialize();
+  } catch (e) {
+    debugPrint('RevenueCat init failed (non-blocking): $e');
+  }
 
   runApp(
     const ProviderScope(
