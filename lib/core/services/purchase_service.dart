@@ -71,16 +71,23 @@ class RevenueCatService {
   static Future<bool> isProUser() async {
     if (!_initialized) await initialize();
     try {
+      // Check RevenueCat first (mobile purchases)
       final info = await Purchases.getCustomerInfo();
-      return info.entitlements.all[entitlementId]?.isActive ?? false;
+      if (info.entitlements.all[entitlementId]?.isActive == true) {
+        return true;
+      }
     } catch (e) {
-      debugPrint('isProUser error: $e');
-      return false;
+      debugPrint('isProUser RC error: $e');
     }
+
+    // Fallback: check Supabase (web purchases via Stripe)
+    return await _isProInSupabase();
   }
 
   static Future<SubscriptionStatus> getStatus() async {
     if (!_initialized) await initialize();
+
+    // Check RevenueCat first
     try {
       final info = await Purchases.getCustomerInfo();
       final entitlement = info.entitlements.all[entitlementId];
@@ -101,11 +108,41 @@ class RevenueCatService {
           isLifetime: productId.contains('lifetime'),
         );
       }
-
-      return SubscriptionStatus.free();
     } catch (e) {
-      debugPrint('getStatus error: $e');
-      return SubscriptionStatus.free();
+      debugPrint('getStatus RC error: $e');
+    }
+
+    // Fallback: check Supabase (web/Stripe subscription)
+    if (await _isProInSupabase()) {
+      return SubscriptionStatus(
+        tier: 'premium',
+        isActive: true,
+        productId: 'web_stripe',
+        isLifetime: false,
+      );
+    }
+
+    return SubscriptionStatus.free();
+  }
+
+  /// Check Supabase user_subscriptions for web/Stripe purchases
+  static Future<bool> _isProInSupabase() async {
+    try {
+      final userId = SupabaseService.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final data = await SupabaseService.client
+          .from('user_subscriptions')
+          .select('tier')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      final tier = data?['tier'] as String? ?? 'free';
+      debugPrint('Supabase subscription tier: $tier');
+      return tier == 'premium';
+    } catch (e) {
+      debugPrint('Supabase subscription check error: $e');
+      return false;
     }
   }
 
