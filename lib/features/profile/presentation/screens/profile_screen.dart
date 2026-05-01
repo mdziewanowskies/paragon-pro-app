@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/purchase_service.dart';
+import '../../../../core/services/subscription_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
 import '../../../ksef/presentation/widgets/ksef_settings.dart';
@@ -98,6 +99,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
     final subscription = ref.watch(revenueCatStatusProvider);
+    final supabaseSub = ref.watch(subscriptionProvider);
+    final hasPremiumInSupabase =
+        supabaseSub.valueOrNull?.isPremium ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -129,23 +133,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       loading: () => const LoadingSpinner(),
                       error: (_, __) =>
                           const Text('Błąd ładowania subskrypcji'),
-                      data: (sub) => Column(
+                      data: (sub) {
+                        final isPremium =
+                            sub.isPremium || hasPremiumInSupabase;
+                        final tierLabel = isPremium && sub.isFree
+                            ? 'Premium'
+                            : sub.tierLabel;
+                        return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
                               Icon(
-                                sub.isPremium
+                                isPremium
                                     ? Icons.workspace_premium_rounded
                                     : Icons.card_membership_rounded,
                                 size: 20,
-                                color: sub.isPremium
+                                color: isPremium
                                     ? Colors.amber
                                     : null,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Plan ${sub.tierLabel}',
+                                'Plan $tierLabel',
                                 style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700),
@@ -198,7 +208,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           ],
                           const SizedBox(height: 12),
-                          if (sub.isFree)
+                          if (!isPremium)
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
@@ -219,7 +229,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                             ),
                         ],
-                      ),
+                      );
+                      },
                     ),
                   ),
                 ),
