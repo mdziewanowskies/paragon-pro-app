@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/receipt_image_cache.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/merchant_normalizer.dart';
@@ -26,9 +27,11 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
   bool _isUploading = false;
 
   Future<void> _pickAndUpload(ImageSource source) async {
-    // Check subscription limit
+    // Check subscription limit (skip if premium via RC or Supabase)
+    final rcStatus = ref.read(revenueCatStatusProvider).value;
+    final isPro = rcStatus?.isPremium ?? false;
     final sub = ref.read(subscriptionProvider).value;
-    if (sub != null && !sub.canUpload) {
+    if (!isPro && sub != null && !sub.canUpload) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -209,9 +212,11 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
   @override
   Widget build(BuildContext context) {
     final sub = ref.watch(subscriptionProvider).value;
+    final rcStatus = ref.watch(revenueCatStatusProvider).value;
+    final isPro = rcStatus?.isPremium ?? false;
     final usedCount = sub?.currentMonthReceipts ?? 0;
-    final maxCount = sub?.maxReceiptsPerMonth ?? 10;
-    final isUnlimited = sub?.isUnlimited ?? false;
+    final maxCount = sub?.maxReceiptsPerMonth ?? 5;
+    final isUnlimited = isPro || (sub?.isUnlimited ?? false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
