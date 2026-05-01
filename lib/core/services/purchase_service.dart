@@ -5,7 +5,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'supabase_service.dart';
 
-const _revenueCatApiKey = 'test_NoVmdZvFeAgfvMQrhzdosZpdoLD';
+const _revenueCatApiKey = 'appl_HjYgkiUcQvTnQBkqFHqHAPuuoXw';
 
 class RevenueCatService {
   static bool _initialized = false;
