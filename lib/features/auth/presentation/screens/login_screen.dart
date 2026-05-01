@@ -53,22 +53,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } catch (e, stackTrace) {
-      debugPrint('=== LOGIN ERROR ===');
-      debugPrint('Error type: ${e.runtimeType}');
-      debugPrint('Error: $e');
-      debugPrint('Stack: $stackTrace');
-      developer.log('Login failed', error: e, stackTrace: stackTrace, name: 'Auth');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Błąd logowania: ${_getErrorMessage(e)}'),
-            backgroundColor: AppColors.lightDestructive,
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      }
+      _handleAuthError(e, stackTrace);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = ref.read(authServiceProvider);
+      final response = await authService.signInWithGoogle();
+      if (response == null) {
+        // user cancelled
+        return;
+      }
+
+      await ref.read(profileProvider.notifier).refresh();
+      final profile = ref.read(profileProvider).value;
+
+      if (mounted) {
+        if (profile == null || !profile.profileCompleted) {
+          context.go('/profile-setup');
+        } else {
+          context.go('/');
+        }
+      }
+    } catch (e, stackTrace) {
+      _handleAuthError(e, stackTrace);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _handleAuthError(Object e, StackTrace stackTrace) {
+    debugPrint('=== LOGIN ERROR ===');
+    debugPrint('Error type: ${e.runtimeType}');
+    debugPrint('Error: $e');
+    debugPrint('Stack: $stackTrace');
+    developer.log('Login failed', error: e, stackTrace: stackTrace, name: 'Auth');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Błąd logowania: ${_getErrorMessage(e)}'),
+          backgroundColor: AppColors.lightDestructive,
+          duration: const Duration(seconds: 6),
+        ),
+      );
     }
   }
 
@@ -176,6 +207,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                 )
                               : const Text('Zaloguj się'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.2),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12),
+                            child: Text(
+                              'lub',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _loginWithGoogle,
+                          icon: const Icon(Icons.g_mobiledata_rounded,
+                              size: 28),
+                          label: const Text('Kontynuuj z Google'),
                         ),
                       ),
                       const SizedBox(height: 16),

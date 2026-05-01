@@ -14,6 +14,15 @@ class AppConstants {
     defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4emltb2N5aWJsYnlveGp4bWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjU2MTksImV4cCI6MjA3NzY0MTYxOX0.4mBr-eLUfhGjeDGfzReS7rXRaFouyH8wrJgSLE1ogso',
   );
 
+  // Google OAuth client IDs (from Google Cloud Console → Credentials)
+  // Web client ID is also the one configured in Supabase Auth → Providers → Google.
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
+  static const String googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+  );
+
   // Storage
   static const String receiptsBucket = 'receipts';
 
