@@ -1,13 +1,16 @@
 import 'dart:developer' as developer;
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -31,7 +34,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      Haptics.error();
+      return;
+    }
+    Haptics.tap();
 
     setState(() => _isLoading = true);
     try {
@@ -40,18 +47,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-
-      // Check if profile is completed
-      await ref.read(profileProvider.notifier).refresh();
-      final profile = ref.read(profileProvider).value;
-
-      if (mounted) {
-        if (profile == null || !profile.profileCompleted) {
-          context.go('/profile-setup');
-        } else {
-          context.go('/');
-        }
-      }
+      Haptics.success();
+      await _navigatePostLogin();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);
     } finally {
@@ -60,29 +57,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginWithGoogle() async {
+    Haptics.tap();
     setState(() => _isLoading = true);
     try {
       final authService = ref.read(authServiceProvider);
       final response = await authService.signInWithGoogle();
-      if (response == null) {
-        // user cancelled
-        return;
-      }
-
-      await ref.read(profileProvider.notifier).refresh();
-      final profile = ref.read(profileProvider).value;
-
-      if (mounted) {
-        if (profile == null || !profile.profileCompleted) {
-          context.go('/profile-setup');
-        } else {
-          context.go('/');
-        }
-      }
+      if (response == null) return; // user cancelled
+      Haptics.success();
+      await _navigatePostLogin();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithApple() async {
+    Haptics.tap();
+    setState(() => _isLoading = true);
+    try {
+      final authService = ref.read(authServiceProvider);
+      final response = await authService.signInWithApple();
+      if (response == null) return;
+      Haptics.success();
+      await _navigatePostLogin();
+    } catch (e, stackTrace) {
+      _handleAuthError(e, stackTrace);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _navigatePostLogin() async {
+    await ref.read(profileProvider.notifier).refresh();
+    final profile = ref.read(profileProvider).value;
+    if (!mounted) return;
+    if (profile == null || !profile.profileCompleted) {
+      context.go('/profile-setup');
+    } else {
+      context.go('/');
     }
   }
 
@@ -92,15 +105,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     debugPrint('Error: $e');
     debugPrint('Stack: $stackTrace');
     developer.log('Login failed', error: e, stackTrace: stackTrace, name: 'Auth');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Błąd logowania: ${_getErrorMessage(e)}'),
-          backgroundColor: AppColors.lightDestructive,
-          duration: const Duration(seconds: 6),
-        ),
-      );
-    }
+    if (!mounted) return;
+    AppSnack.show(
+      context,
+      'Błąd logowania: ${_getErrorMessage(e)}',
+      kind: SnackKind.error,
+      duration: const Duration(seconds: 6),
+    );
   }
 
   String _getErrorMessage(dynamic error) {
@@ -254,6 +265,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           label: const Text('Kontynuuj z Google'),
                         ),
                       ),
+                      if (!kIsWeb && Platform.isIOS) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _loginWithApple,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.apple, size: 22),
+                            label: const Text('Kontynuuj z Apple'),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       TextButton(
                         onPressed: () => context.go('/register'),

@@ -258,5 +258,19 @@ class AppTheme {
           color: AppColors.darkBorder,
           thickness: 1,
         ),
+        pageTransitionsTheme: _smoothTransitions,
+        splashFactory: InkSparkle.splashFactory,
       );
+
+  static const PageTransitionsTheme _smoothTransitions =
+      PageTransitionsTheme(
+    builders: {
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: FadeForwardsPageTransitionsBuilder(),
+      TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+      TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+    },
+  );
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -138,20 +139,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(
-          index: _currentTab,
-          children: [
-            _HomeTab(),
-            const ReceiptListScreen(),
-            const KsefPanelScreen(),
-            const WarrantyListScreen(),
-            _MoreTab(items: _moreItems),
-          ],
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+          child: IndexedStack(
+            key: ValueKey(_currentTab),
+            index: _currentTab,
+            children: [
+              _HomeTab(),
+              const ReceiptListScreen(),
+              const KsefPanelScreen(),
+              const WarrantyListScreen(),
+              _MoreTab(items: _moreItems),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentTab,
-        onDestinationSelected: (i) => setState(() => _currentTab = i),
+        onDestinationSelected: (i) {
+          if (i != _currentTab) Haptics.selection();
+          setState(() => _currentTab = i);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
 import 'supabase_service.dart';
@@ -74,6 +78,52 @@ class AuthService {
       idToken: idToken,
       accessToken: accessToken,
     );
+  }
+
+  Future<AuthResponse?> signInWithApple() async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'Use Supabase signInWithOAuth on web; this method is mobile-only.',
+      );
+    }
+    if (!Platform.isIOS && !Platform.isMacOS) {
+      throw UnsupportedError(
+        'Sign in with Apple is only available on Apple platforms.',
+      );
+    }
+
+    final rawNonce = _generateNonce();
+    final hashedNonce =
+        sha256.convert(utf8.encode(rawNonce)).toString();
+
+    final credential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+      nonce: hashedNonce,
+    );
+
+    final idToken = credential.identityToken;
+    if (idToken == null) {
+      throw StateError('Apple Sign-In returned no ID token');
+    }
+
+    return await SupabaseService.auth.signInWithIdToken(
+      provider: OAuthProvider.apple,
+      idToken: idToken,
+      nonce: rawNonce,
+    );
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   Future<void> signOut() async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../shared/widgets/app_logo.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -72,7 +73,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Expanded(
                 child: PageView.builder(
                   controller: _controller,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
+                  onPageChanged: (i) {
+                    Haptics.selection();
+                    setState(() => _currentPage = i);
+                  },
                   itemCount: _pages.length,
                   itemBuilder: (context, index) => _pages[index],
                 ),

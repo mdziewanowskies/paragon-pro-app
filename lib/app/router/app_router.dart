@@ -10,6 +10,7 @@ import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/subscription/presentation/screens/paywall_screen.dart';
 import '../../features/receipts/presentation/screens/receipt_grid_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../shared/widgets/smooth_page_transition.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -28,39 +29,48 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const OnboardingScreen()),
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const LoginScreen()),
       ),
       GoRoute(
         path: '/register',
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const RegisterScreen()),
       ),
       GoRoute(
         path: '/profile-setup',
-        builder: (context, state) => const ProfileSetupScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const ProfileSetupScreen()),
       ),
       GoRoute(
         path: '/',
-        builder: (context, state) => const DashboardScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const DashboardScreen()),
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const ProfileScreen()),
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const SettingsScreen()),
       ),
       GoRoute(
         path: '/pricing',
-        builder: (context, state) => const PaywallScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const PaywallScreen()),
       ),
       GoRoute(
         path: '/receipts',
-        builder: (context, state) => const ReceiptGridScreen(),
+        pageBuilder: (context, state) =>
+            smoothPage(child: const ReceiptGridScreen()),
       ),
     ],
   );

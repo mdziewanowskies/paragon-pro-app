@@ -2,10 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/receipt_image_cache.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../core/utils/merchant_normalizer.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -33,16 +34,15 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
     final sub = ref.read(subscriptionProvider).value;
     if (!isPro && sub != null && !sub.canUpload) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Osiągnięto limit paragonów w tym miesiącu. Ulepsz plan!'),
-            backgroundColor: AppColors.lightDestructive,
-          ),
+        AppSnack.show(
+          context,
+          'Osiągnięto limit paragonów w tym miesiącu. Ulepsz plan!',
+          kind: SnackKind.warning,
         );
       }
       return;
     }
+    Haptics.medium();
 
     final picker = ImagePicker();
     final XFile? image;
@@ -78,11 +78,10 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
           'userId': userId,
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Paragon zapisany offline. Zostanie przesłany po połączeniu.'),
-            ),
+          AppSnack.show(
+            context,
+            'Paragon zapisany offline. Zostanie przesłany po połączeniu.',
+            kind: SnackKind.info,
           );
         }
         return;
@@ -173,18 +172,13 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                if (receiptData['ai_processed'] == true)
-                  const Icon(Icons.auto_awesome, color: Colors.amber, size: 18),
-                const SizedBox(width: 8),
-                const Text('Paragon dodany pomyślnie!'),
-              ],
-            ),
-            backgroundColor: AppColors.lightPrimary,
-          ),
+        Haptics.heavy();
+        AppSnack.show(
+          context,
+          receiptData['ai_processed'] == true
+              ? 'Paragon dodany! AI rozpoznało dane.'
+              : 'Paragon dodany pomyślnie!',
+          kind: SnackKind.success,
         );
         widget.onUploaded?.call();
         ref.read(receiptListRefreshProvider.notifier).state++;
@@ -197,11 +191,10 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Błąd przesyłania: $e'),
-            backgroundColor: AppColors.lightDestructive,
-          ),
+        AppSnack.show(
+          context,
+          'Błąd przesyłania: $e',
+          kind: SnackKind.error,
         );
       }
     } finally {

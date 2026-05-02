@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/receipt_image_cache.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -280,8 +281,10 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
+        Haptics.medium();
         await _loadReceipts();
         await _loadCounts();
+        Haptics.success();
       },
       child: CustomScrollView(
         controller: _scrollController,
@@ -795,6 +798,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       ),
                       confirmDismiss: (_) => _confirmDelete(receipt),
                       onDismissed: (_) {
+                        Haptics.medium();
                         ref
                             .read(receiptRepositoryProvider)
                             .deleteReceipt(receipt.id);

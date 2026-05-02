@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/purchase_service.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
@@ -31,16 +33,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 
   Future<void> _purchasePackage(Package package) async {
+    Haptics.medium();
     setState(() => _isPurchasing = true);
     try {
       final success = await RevenueCatService.purchase(package);
       if (success && mounted) {
         ref.invalidate(revenueCatStatusProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Premium aktywowany! Dziękujemy!'),
-            backgroundColor: Colors.green,
-          ),
+        Haptics.heavy();
+        AppSnack.show(
+          context,
+          'Premium aktywowany! Dziękujemy!',
+          kind: SnackKind.success,
         );
         context.go('/');
       }
@@ -48,8 +51,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       if (mounted) {
         final code = PurchasesErrorHelper.getErrorCode(e);
         if (code != PurchasesErrorCode.purchaseCancelledError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Błąd: ${e.message}')),
+          AppSnack.show(
+            context,
+            'Błąd: ${e.message}',
+            kind: SnackKind.error,
           );
         }
       }
@@ -59,24 +64,28 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 
   Future<void> _restore() async {
+    Haptics.tap();
     setState(() => _isPurchasing = true);
     try {
       final restored = await RevenueCatService.restorePurchases();
       if (mounted) {
         ref.invalidate(revenueCatStatusProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(restored
-                ? 'Zakupy przywrócone!'
-                : 'Nie znaleziono aktywnych subskrypcji'),
-          ),
+        AppSnack.show(
+          context,
+          restored
+              ? 'Zakupy przywrócone!'
+              : 'Nie znaleziono aktywnych subskrypcji',
+          kind: restored ? SnackKind.success : SnackKind.info,
         );
         if (restored) context.go('/');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Błąd: $e')));
+        AppSnack.show(
+          context,
+          'Błąd: $e',
+          kind: SnackKind.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _isPurchasing = false);
@@ -198,14 +207,20 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     label: 'Miesięcznie',
                     price: _formatPrice(monthly, '19,99 zł'),
                     isSelected: !_isYearly,
-                    onTap: () => setState(() => _isYearly = false),
+                    onTap: () {
+                      Haptics.selection();
+                      setState(() => _isYearly = false);
+                    },
                   ),
                   _PlanTab(
                     label: 'Rocznie',
                     price: _formatPrice(yearly, '179,99 zł'),
                     badge: '-20%',
                     isSelected: _isYearly,
-                    onTap: () => setState(() => _isYearly = true),
+                    onTap: () {
+                      Haptics.selection();
+                      setState(() => _isYearly = true);
+                    },
                   ),
                 ],
               ),
@@ -239,10 +254,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                         if (pkg != null) {
                           _purchasePackage(pkg);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Produkty nie są jeszcze skonfigurowane w sklepie'),
-                            ),
+                          AppSnack.show(
+                            context,
+                            'Produkty nie są jeszcze skonfigurowane w sklepie',
+                            kind: SnackKind.warning,
                           );
                         }
                       },

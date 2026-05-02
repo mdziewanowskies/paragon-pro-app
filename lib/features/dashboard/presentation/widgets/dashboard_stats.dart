@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../shared/widgets/animated_counter.dart';
 
 class DashboardStats extends StatelessWidget {
   final double totalExpenses;
@@ -40,14 +41,28 @@ class DashboardStats extends StatelessWidget {
         _StatCard(
           icon: Icons.receipt_long_rounded,
           title: 'Paragony',
-          value: receiptCount.toString(),
+          valueWidget: AnimatedCounter(
+            value: receiptCount,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
           subtitle: 'Wszystkie paragony',
           gradient: AppColors.accentGradient,
         ),
         _StatCard(
           icon: Icons.shield_rounded,
           title: 'Gwarancje',
-          value: activeWarranties.toString(),
+          valueWidget: AnimatedCounter(
+            value: activeWarranties,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           subtitle: 'Aktywne',
           isSecondary: true,
         ),
@@ -66,7 +81,8 @@ class DashboardStats extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String value;
+  final String? value;
+  final Widget? valueWidget;
   final String subtitle;
   final LinearGradient? gradient;
   final bool isSecondary;
@@ -75,12 +91,13 @@ class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.icon,
     required this.title,
-    required this.value,
+    this.value,
+    this.valueWidget,
     required this.subtitle,
     this.gradient,
     this.isSecondary = false,
     this.isPrimary = false,
-  });
+  }) : assert(value != null || valueWidget != null);
 
   @override
   Widget build(BuildContext context) {
@@ -138,17 +155,18 @@ class _StatCard extends StatelessWidget {
               ),
             ],
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: hasGradient
-                  ? Colors.white
-                  : Theme.of(context).colorScheme.onSurface,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
+          valueWidget ??
+              Text(
+                value!,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: hasGradient
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
           Text(
             subtitle,
             style: TextStyle(
