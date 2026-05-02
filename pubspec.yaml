@@ -68,6 +68,9 @@ dependencies:
   sign_in_with_apple: ^6.1.4
   crypto: ^3.0.5
 
+  # Celebratory confetti for milestones (premium purchase, first receipt)
+  confetti: ^0.7.0
+
 dependency_overrides:
   # Pin to version that doesn't use objective_c FFI (fixes iOS 26 simulator crash)
   path_provider_foundation: 2.4.1

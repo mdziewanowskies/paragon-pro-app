@@ -48,9 +48,12 @@ class ReceiptGridCard extends StatelessWidget {
                             ),
                           ),
                         )
-                      : ReceiptImage(
-                          imageUrl: receipt.imageUrl,
-                          fit: BoxFit.cover,
+                      : Hero(
+                          tag: 'receipt-image-${receipt.id}',
+                          child: ReceiptImage(
+                            imageUrl: receipt.imageUrl,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                   // Badges
                   if (receipt.isKsefInvoice || receipt.aiProcessed)

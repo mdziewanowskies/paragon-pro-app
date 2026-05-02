@@ -51,9 +51,12 @@ class ReceiptCard extends StatelessWidget {
                       width: double.infinity,
                       child: receipt.isKsefWithoutImage
                           ? _KsefPlaceholder()
-                          : ReceiptImage(
-                              imageUrl: receipt.imageUrl,
-                              fit: BoxFit.cover,
+                          : Hero(
+                              tag: 'receipt-image-${receipt.id}',
+                              child: ReceiptImage(
+                                imageUrl: receipt.imageUrl,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                     ),
                     // Badges row (top right)

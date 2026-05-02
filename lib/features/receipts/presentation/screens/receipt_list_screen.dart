@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import '../../../../core/services/haptics.dart';
+import '../../../../shared/widgets/skeletons.dart';
 import '../../../../core/services/receipt_image_cache.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_spinner.dart';
 import '../../data/models/receipt_model.dart';
 import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
@@ -677,7 +677,8 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
           // List
           if (_isLoading)
             const SliverFillRemaining(
-              child: LoadingSpinner(message: 'Ładowanie paragonów...'),
+              hasScrollBody: true,
+              child: ReceiptListSkeleton(),
             )
           else if (_receipts.isEmpty)
             SliverFillRemaining(

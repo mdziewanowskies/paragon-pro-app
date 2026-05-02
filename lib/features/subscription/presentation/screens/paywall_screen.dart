@@ -6,6 +6,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/celebration_overlay.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
@@ -39,13 +40,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       final success = await RevenueCatService.purchase(package);
       if (success && mounted) {
         ref.invalidate(revenueCatStatusProvider);
-        Haptics.heavy();
-        AppSnack.show(
+        await CelebrationOverlay.show(
           context,
-          'Premium aktywowany! Dziękujemy!',
-          kind: SnackKind.success,
+          title: 'Premium aktywowany!',
+          subtitle: 'Wszystkie funkcje są teraz odblokowane.',
         );
-        context.go('/');
+        if (mounted) context.go('/');
       }
     } on PlatformException catch (e) {
       if (mounted) {

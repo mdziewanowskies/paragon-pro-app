@@ -9,6 +9,7 @@ import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/dashboard_stats.dart';
 import '../widgets/gamification_progress.dart';
 import '../widgets/welcome_banner.dart';
@@ -264,20 +265,31 @@ class _HomeTab extends ConsumerWidget {
               children: [
                 WelcomeBanner(userName: profile.value?.firstName),
                 const SizedBox(height: 16),
-                stats.when(
-                  loading: () => const SizedBox(height: 200),
-                  error: (_, __) => const SizedBox.shrink(),
-                  data: (data) => DashboardStats(
-                    totalExpenses:
-                        data['totalExpenses'] as double? ?? 0,
-                    avgExpenses: data['avgExpenses'] as double? ?? 0,
-                    receiptCount: data['receiptCount'] as int? ?? 0,
-                    activeWarranties:
-                        data['activeWarranties'] as int? ?? 0,
-                    topCategory:
-                        data['topCategory'] as String? ?? '-',
-                    topMerchant:
-                        data['topMerchant'] as String? ?? '-',
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: stats.when(
+                    loading: () => const KeyedSubtree(
+                      key: ValueKey('stats-skeleton'),
+                      child: DashboardStatsSkeleton(),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (data) => KeyedSubtree(
+                      key: const ValueKey('stats-data'),
+                      child: DashboardStats(
+                        totalExpenses:
+                            data['totalExpenses'] as double? ?? 0,
+                        avgExpenses: data['avgExpenses'] as double? ?? 0,
+                        receiptCount: data['receiptCount'] as int? ?? 0,
+                        activeWarranties:
+                            data['activeWarranties'] as int? ?? 0,
+                        topCategory:
+                            data['topCategory'] as String? ?? '-',
+                        topMerchant:
+                            data['topMerchant'] as String? ?? '-',
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

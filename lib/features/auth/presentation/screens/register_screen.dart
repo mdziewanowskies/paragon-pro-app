@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -33,7 +35,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      Haptics.error();
+      return;
+    }
+    Haptics.tap();
 
     setState(() => _isLoading = true);
     try {
@@ -42,7 +48,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-
+      Haptics.success();
       if (mounted) {
         context.go('/profile-setup');
       }
@@ -53,12 +59,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       debugPrint('Stack: $stackTrace');
       developer.log('Register failed', error: e, stackTrace: stackTrace, name: 'Auth');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Błąd rejestracji: ${_getErrorMessage(e)}'),
-            backgroundColor: AppColors.lightDestructive,
-            duration: const Duration(seconds: 6),
-          ),
+        AppSnack.show(
+          context,
+          'Błąd rejestracji: ${_getErrorMessage(e)}',
+          kind: SnackKind.error,
+          duration: const Duration(seconds: 6),
         );
       }
     } finally {
