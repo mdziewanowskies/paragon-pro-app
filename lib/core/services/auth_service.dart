@@ -75,11 +75,31 @@ class AuthService {
       throw StateError('Google Sign-In returned no ID token');
     }
 
+    // Newer GoogleSignIn iOS SDK auto-generates a nonce and embeds it in
+    // the id_token. Supabase rejects the token unless we also forward the
+    // matching nonce. Extract it from the token payload.
+    final nonce = _nonceFromIdToken(idToken);
+
     return await SupabaseService.auth.signInWithIdToken(
       provider: OAuthProvider.google,
       idToken: idToken,
       accessToken: accessToken,
+      nonce: nonce,
     );
+  }
+
+  String? _nonceFromIdToken(String idToken) {
+    try {
+      final parts = idToken.split('.');
+      if (parts.length != 3) return null;
+      final padded = base64Url.normalize(parts[1]);
+      final payload =
+          jsonDecode(utf8.decode(base64Url.decode(padded)))
+              as Map<String, dynamic>;
+      return payload['nonce'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<AuthResponse?> signInWithApple() async {
