@@ -52,7 +52,10 @@ class AuthService {
     return await SupabaseService.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: 'com.paragonpro.paragonpro://login-callback/',
-      authScreenLaunchMode: LaunchMode.externalApplication,
+      // inAppBrowserView = SFSafariViewController on iOS, a native
+      // in-app sheet that shares cookies with system Safari (one-tap
+      // login if user is already signed in to Google in Safari).
+      authScreenLaunchMode: LaunchMode.inAppBrowserView,
     );
   }
 
