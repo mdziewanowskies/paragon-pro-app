@@ -61,9 +61,6 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.3
 
-  # Google Sign-In (via Supabase signInWithIdToken)
-  google_sign_in: ^6.2.1
-
   # Sign in with Apple (required by App Store when offering social login)
   sign_in_with_apple: ^6.1.4
   crypto: ^3.0.5
