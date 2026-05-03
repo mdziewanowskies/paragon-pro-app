@@ -68,6 +68,9 @@ dependencies:
   sign_in_with_apple: ^6.1.4
   crypto: ^3.0.5
 
+  # OpenID Connect / OAuth with full nonce control (Google native flow)
+  flutter_appauth: ^7.0.2
+
   # Celebratory confetti for milestones (premium purchase, first receipt)
   confetti: ^0.7.0
 
