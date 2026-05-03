@@ -21,7 +21,7 @@ class AppConstants {
   static const String googleWebClientId = String.fromEnvironment(
     'GOOGLE_WEB_CLIENT_ID',
     defaultValue:
-        '489859737052-eo8mjhc2apsbu5u2vo28smr65vlu0j8m.apps.googleusercontent.com',
+        '489859737052-18phrv1qt3lh5dcouofn62jatntv6kom.apps.googleusercontent.com',
   );
   static const String googleIosClientId = String.fromEnvironment(
     'GOOGLE_IOS_CLIENT_ID',
