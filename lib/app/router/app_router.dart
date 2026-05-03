@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
@@ -13,7 +15,20 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../shared/widgets/smooth_page_transition.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  // Bridge Supabase auth state changes into go_router's redirect cycle
+  // so OAuth deep-link returns and email/pwd sign-in both navigate the
+  // user out of /login automatically.
+  final notifier = ValueNotifier<int>(0);
+  final sub = SupabaseService.auth.onAuthStateChange.listen((_) {
+    notifier.value++;
+  });
+  ref.onDispose(() {
+    sub.cancel();
+    notifier.dispose();
+  });
+
   return GoRouter(
+    refreshListenable: notifier,
     initialLocation: '/',
     redirect: (context, state) {
       final user = SupabaseService.auth.currentUser;

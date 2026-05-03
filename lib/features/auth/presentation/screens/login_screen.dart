@@ -61,10 +61,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.signInWithGoogle();
-      if (response == null) return; // user cancelled
-      Haptics.success();
-      await _navigatePostLogin();
+      // Returns true once the OAuth browser opens. The actual sign-in
+      // completes via deep-link callback; the router listens on
+      // Supabase auth state and will redirect us out of /login then.
+      await authService.signInWithGoogle();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);
     } finally {

@@ -4,10 +4,9 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../constants/app_constants.dart';
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'supabase_service.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
@@ -41,65 +40,20 @@ class AuthService {
     );
   }
 
-  Future<AuthResponse?> signInWithGoogle() async {
+  /// Returns true if the OAuth browser flow launched successfully.
+  /// The actual sign-in completes asynchronously via deep link callback —
+  /// listen to [authStateProvider] for the resulting session.
+  Future<bool> signInWithGoogle() async {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'Use Supabase signInWithOAuth on web; this method is mobile-only.',
+      return await SupabaseService.auth.signInWithOAuth(
+        OAuthProvider.google,
       );
     }
-
-    if (AppConstants.googleWebClientId.isEmpty ||
-        AppConstants.googleWebClientId.contains('REPLACE_WITH')) {
-      throw StateError(
-        'GOOGLE_WEB_CLIENT_ID not configured. Set defaultValue in '
-        'AppConstants.googleWebClientId or pass via --dart-define.',
-      );
-    }
-
-    final googleSignIn = GoogleSignIn(
-      clientId: Platform.isIOS && AppConstants.googleIosClientId.isNotEmpty
-          ? AppConstants.googleIosClientId
-          : null,
-      serverClientId: AppConstants.googleWebClientId,
-      scopes: const ['email', 'profile', 'openid'],
+    return await SupabaseService.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'com.paragonpro.paragonpro://login-callback/',
+      authScreenLaunchMode: LaunchMode.externalApplication,
     );
-
-    final googleUser = await googleSignIn.signIn();
-    if (googleUser == null) return null; // user cancelled
-
-    final googleAuth = await googleUser.authentication;
-    final idToken = googleAuth.idToken;
-    final accessToken = googleAuth.accessToken;
-
-    if (idToken == null) {
-      throw StateError('Google Sign-In returned no ID token');
-    }
-
-    // Newer GoogleSignIn iOS SDK auto-generates a nonce and embeds it in
-    // the id_token. Supabase rejects the token unless we also forward the
-    // matching nonce. Extract it from the token payload.
-    final nonce = _nonceFromIdToken(idToken);
-
-    return await SupabaseService.auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-      accessToken: accessToken,
-      nonce: nonce,
-    );
-  }
-
-  String? _nonceFromIdToken(String idToken) {
-    try {
-      final parts = idToken.split('.');
-      if (parts.length != 3) return null;
-      final padded = base64Url.normalize(parts[1]);
-      final payload =
-          jsonDecode(utf8.decode(base64Url.decode(padded)))
-              as Map<String, dynamic>;
-      return payload['nonce'] as String?;
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<AuthResponse?> signInWithApple() async {
@@ -149,9 +103,6 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    try {
-      await GoogleSignIn().signOut();
-    } catch (_) {}
     await SupabaseService.auth.signOut();
   }
 
