@@ -48,9 +48,11 @@ class AuthService {
       );
     }
 
-    if (AppConstants.googleWebClientId.isEmpty) {
+    if (AppConstants.googleWebClientId.isEmpty ||
+        AppConstants.googleWebClientId.contains('REPLACE_WITH')) {
       throw StateError(
-        'GOOGLE_WEB_CLIENT_ID not configured. Pass via --dart-define.',
+        'GOOGLE_WEB_CLIENT_ID not configured. Set defaultValue in '
+        'AppConstants.googleWebClientId or pass via --dart-define.',
       );
     }
 
