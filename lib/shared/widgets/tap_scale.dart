@@ -17,6 +17,14 @@ class TapScale extends StatefulWidget {
   final Duration duration;
   final Curve curve;
 
+  /// Optional VoiceOver / TalkBack label. When set, replaces whatever
+  /// the child element would announce by default.
+  final String? semanticsLabel;
+
+  /// Optional VoiceOver / TalkBack hint announced after the label
+  /// (e.g. 'opens warranty details').
+  final String? semanticsHint;
+
   const TapScale({
     super.key,
     required this.child,
@@ -26,6 +34,8 @@ class TapScale extends StatefulWidget {
     this.pressedScale = 0.97,
     this.duration = const Duration(milliseconds: 110),
     this.curve = Curves.easeOutCubic,
+    this.semanticsLabel,
+    this.semanticsHint,
   });
 
   /// Backwards-compat shim for old call sites that used `enableHaptic`.
@@ -90,7 +100,7 @@ class _TapScaleState extends State<TapScale>
   @override
   Widget build(BuildContext context) {
     final tappable = widget.onTap != null || widget.onLongPress != null;
-    return MouseRegion(
+    final core = MouseRegion(
       cursor: tappable ? SystemMouseCursors.click : MouseCursor.defer,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -114,6 +124,17 @@ class _TapScaleState extends State<TapScale>
           child: widget.child,
         ),
       ),
+    );
+
+    if (widget.semanticsLabel == null && widget.semanticsHint == null) {
+      return core;
+    }
+    return Semantics(
+      button: tappable,
+      label: widget.semanticsLabel,
+      hint: widget.semanticsHint,
+      excludeSemantics: widget.semanticsLabel != null,
+      child: core,
     );
   }
 }

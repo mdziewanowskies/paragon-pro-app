@@ -43,6 +43,8 @@ class StoresScreen extends ConsumerWidget {
             title: 'Brak sklepów',
             subtitle:
                 'Dodaj paragony, a sklepy pojawią się automatycznie',
+            hint: 'Każdy zeskanowany paragon dodaje swój sklep do tej '
+                'listy z liczbą wizyt i wydaną kwotą.',
           );
         }
 

@@ -85,6 +85,9 @@ class WarrantyListScreen extends ConsumerWidget {
             icon: Icons.shield_rounded,
             title: 'Brak gwarancji',
             subtitle: 'Dodaj gwarancję do paragonu, aby śledzić jej status.',
+            hint:
+                'Otwórz dowolny paragon na liście Paragony i wybierz '
+                '"Dodaj gwarancję".',
           );
         }
 
