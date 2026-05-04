@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/feature_flags_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
@@ -20,6 +21,7 @@ class PaywallScreen extends ConsumerStatefulWidget {
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   bool _isPurchasing = false;
   bool _isYearly = true;
+  PaywallVariant _variant = PaywallVariant.yearlyDefault;
 
   String _formatPrice(Package? pkg, String fallback) {
     if (pkg == null) return fallback;
@@ -32,7 +34,19 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService.paywallShown();
+    _resolveVariant();
+  }
+
+  Future<void> _resolveVariant() async {
+    final variant = await FeatureFlags.paywallVariant();
+    if (!mounted) return;
+    setState(() {
+      _variant = variant;
+      _isYearly = variant != PaywallVariant.monthlyDefault;
+    });
+    AnalyticsService.logEvent('paywall_view', params: {
+      'variant': variant.name,
+    });
   }
 
   Future<void> _purchasePackage(Package package) async {
@@ -144,16 +158,21 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 const Icon(Icons.workspace_premium_rounded,
                     color: Colors.amber, size: 56),
                 const SizedBox(height: 16),
-                const Text(
-                  'ParagonPro Premium',
-                  style: TextStyle(
+                Text(
+                  _variant == PaywallVariant.trialFirst
+                      ? 'Wypróbuj Premium za darmo'
+                      : 'ParagonPro Premium',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '7 dni za darmo — anuluj kiedy chcesz',
+                  _variant == PaywallVariant.trialFirst
+                      ? '7 dni bez opłat. Plan wybierzesz po zakończeniu triala.'
+                      : '7 dni za darmo — anuluj kiedy chcesz',
                   style: TextStyle(
                     fontSize: 15,
                     color: Theme.of(context)
