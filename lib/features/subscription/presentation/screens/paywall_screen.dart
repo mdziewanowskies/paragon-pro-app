@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
@@ -31,15 +32,18 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.paywallShown();
   }
 
   Future<void> _purchasePackage(Package package) async {
     Haptics.medium();
+    AnalyticsService.purchaseStarted(package.identifier);
     setState(() => _isPurchasing = true);
     try {
       final success = await RevenueCatService.purchase(package);
       if (success && mounted) {
         ref.invalidate(revenueCatStatusProvider);
+        AnalyticsService.purchaseCompleted(package.identifier);
         await CelebrationOverlay.show(
           context,
           title: 'Premium aktywowany!',

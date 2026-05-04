@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -109,12 +110,16 @@ class _WarrantyDialogState extends ConsumerState<WarrantyDialog> {
       setState(() => _isSaving = false);
       final action = await _showDuplicateDialog(duplicate);
       if (action == _DupAction.openExisting) {
+        AnalyticsService.warrantyDuplicateBlocked();
         // Close the create dialog so the user lands back on the
         // warranties list where the existing entry is visible.
         if (mounted) Navigator.pop(context);
         return;
       }
-      if (action == _DupAction.cancel) return;
+      if (action == _DupAction.cancel) {
+        AnalyticsService.warrantyDuplicateBlocked();
+        return;
+      }
       // keepBoth → fall through and insert.
       setState(() => _isSaving = true);
     }
@@ -169,6 +174,7 @@ class _WarrantyDialogState extends ConsumerState<WarrantyDialog> {
       if (mounted) {
         Navigator.pop(context);
         Haptics.heavy();
+        AnalyticsService.warrantyAdded(months: months);
         AppSnack.show(
           context,
           'Gwarancja $months miesięcy została dodana pomyślnie',

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/receipt_image_cache.dart';
@@ -173,6 +174,9 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
 
       if (mounted) {
         Haptics.heavy();
+        AnalyticsService.receiptAdded(
+          aiProcessed: receiptData['ai_processed'] == true,
+        );
         AppSnack.show(
           context,
           receiptData['ai_processed'] == true

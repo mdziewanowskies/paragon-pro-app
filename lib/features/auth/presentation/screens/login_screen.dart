@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/profile_service.dart';
@@ -48,6 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordController.text,
       );
       Haptics.success();
+      AnalyticsService.loginSuccess('email');
       await _navigatePostLogin();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);
@@ -64,6 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final response = await authService.signInWithGoogle();
       if (response == null) return; // user cancelled
       Haptics.success();
+      AnalyticsService.loginSuccess('google');
       await _navigatePostLogin();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);
@@ -80,6 +83,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final response = await authService.signInWithApple();
       if (response == null) return;
       Haptics.success();
+      AnalyticsService.loginSuccess('apple');
       await _navigatePostLogin();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);

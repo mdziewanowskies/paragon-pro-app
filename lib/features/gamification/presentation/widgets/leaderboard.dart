@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../shared/widgets/empty_state.dart';
 
@@ -15,6 +16,7 @@ class Leaderboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
+      AnalyticsService.rankingEmptyStateShown();
       return Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -30,6 +32,7 @@ class Leaderboard extends StatelessWidget {
     }
 
     if (_onlyCurrentUser) {
+      AnalyticsService.rankingEmptyStateShown();
       return Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),

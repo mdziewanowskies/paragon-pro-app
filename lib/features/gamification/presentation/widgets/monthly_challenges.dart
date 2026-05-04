@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 
 class MonthlyChallenges extends StatelessWidget {
@@ -15,6 +16,7 @@ class MonthlyChallenges extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (challenges.isEmpty) {
+      AnalyticsService.challengeEmptyStateShown();
       return Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),

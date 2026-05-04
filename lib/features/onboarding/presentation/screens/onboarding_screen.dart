@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../shared/widgets/app_logo.dart';
 
@@ -75,6 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   controller: _controller,
                   onPageChanged: (i) {
                     Haptics.selection();
+                    AnalyticsService.onboardingPageShown(i);
                     setState(() => _currentPage = i);
                   },
                   itemCount: _pages.length,
@@ -108,7 +110,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => context.go('/register'),
+                        onPressed: () {
+                          AnalyticsService.onboardingCompleted();
+                          context.go('/register');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.lightPrimary,
