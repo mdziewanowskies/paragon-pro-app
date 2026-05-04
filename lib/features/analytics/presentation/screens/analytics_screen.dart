@@ -73,6 +73,12 @@ final analyticsProvider =
   final sortedCategories = filteredCats.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
 
+  // Sum of categories actually shown in the pie chart. We use this
+  // instead of `total` for percentage calculation so the legend always
+  // sums to 100% even when invoices are filtered out.
+  final categoriesTotal =
+      sortedCategories.fold<double>(0, (acc, e) => acc + e.value);
+
   return _AnalyticsData(
     totalExpenses: total,
     monthlyAverage: avg,
@@ -80,6 +86,7 @@ final analyticsProvider =
     topCategoryAmount: topCategoryAmount,
     receiptCount: receipts.length,
     categories: sortedCategories,
+    categoriesTotal: categoriesTotal,
     monthly: sortedMonthly,
     topMerchants: topMerchants.take(5).toList(),
     merchantCounts: merchantCounts,
@@ -93,6 +100,7 @@ class _AnalyticsData {
   final double topCategoryAmount;
   final int receiptCount;
   final List<MapEntry<String, double>> categories;
+  final double categoriesTotal;
   final List<MapEntry<String, double>> monthly;
   final List<MapEntry<String, double>> topMerchants;
   final Map<String, int> merchantCounts;
@@ -104,6 +112,7 @@ class _AnalyticsData {
     required this.topCategoryAmount,
     required this.receiptCount,
     required this.categories,
+    required this.categoriesTotal,
     required this.monthly,
     required this.topMerchants,
     required this.merchantCounts,
@@ -116,6 +125,7 @@ class _AnalyticsData {
         topCategoryAmount: 0,
         receiptCount: 0,
         categories: [],
+        categoriesTotal: 0,
         monthly: [],
         topMerchants: [],
         merchantCounts: {},
@@ -295,8 +305,8 @@ class _CategoryPieChart extends StatelessWidget {
               child: PieChart(
                 PieChartData(
                   sections: data.categories.asMap().entries.map((e) {
-                    final pct = data.totalExpenses > 0
-                        ? e.value.value / data.totalExpenses * 100
+                    final pct = data.categoriesTotal > 0
+                        ? e.value.value / data.categoriesTotal * 100
                         : 0;
                     return PieChartSectionData(
                       color: _colors[e.key % _colors.length],
@@ -315,13 +325,13 @@ class _CategoryPieChart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Legend
+            // Legend — percentages always sum to 100% by construction.
             Wrap(
               spacing: 16,
               runSpacing: 6,
               children: data.categories.asMap().entries.map((e) {
-                final pct = data.totalExpenses > 0
-                    ? (e.value.value / data.totalExpenses * 100)
+                final pct = data.categoriesTotal > 0
+                    ? (e.value.value / data.categoriesTotal * 100)
                     : 0;
                 return Row(
                   mainAxisSize: MainAxisSize.min,
