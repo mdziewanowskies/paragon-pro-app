@@ -5,11 +5,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/utils/share_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/cupertino_date_picker.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_spinner.dart';
+import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/ksef_settings.dart';
 import '../widgets/ksef_invoice_table.dart';
 import '../widgets/vat_summary.dart';
@@ -138,7 +139,12 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
         profile.value!.ksefToken!.isNotEmpty;
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(ksefInvoicesProvider),
+      onRefresh: () async {
+            Haptics.medium();
+            ref.invalidate(ksefInvoicesProvider);
+            await Future<void>.delayed(const Duration(milliseconds: 350));
+            Haptics.success();
+          },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
@@ -260,8 +266,7 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
               ),
               const SizedBox(height: 12),
               invoices.when(
-                loading: () => const SizedBox(
-                    height: 100, child: LoadingSpinner()),
+                loading: () => const GenericCardSkeleton(),
                 error: (e, _) => Text('Błąd: $e'),
                 data: (list) => list.isEmpty
                     ? const EmptyState(

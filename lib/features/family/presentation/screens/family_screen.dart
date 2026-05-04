@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_spinner.dart';
+import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/family_management.dart';
 import '../widgets/family_stats.dart';
 import '../widgets/invitation_card.dart';
@@ -166,7 +166,10 @@ class FamilyScreen extends ConsumerWidget {
             ),
             // Family content
             family.when(
-              loading: () => const LoadingSpinner(),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: GenericCardSkeleton(),
+              ),
               error: (e, _) => Text('Błąd: $e'),
               data: (data) {
                 if (data == null) {

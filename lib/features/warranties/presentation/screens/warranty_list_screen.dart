@@ -1,9 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_spinner.dart';
+import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/warranty_card.dart';
 
 class WarrantyModel {
@@ -76,7 +77,7 @@ class WarrantyListScreen extends ConsumerWidget {
     final warranties = ref.watch(warrantyListProvider);
 
     return warranties.when(
-      loading: () => const LoadingSpinner(message: 'Ładowanie gwarancji...'),
+      loading: () => const GenericListSkeleton(),
       error: (e, _) => Center(child: Text('Błąd: $e')),
       data: (list) {
         if (list.isEmpty) {
@@ -88,7 +89,12 @@ class WarrantyListScreen extends ConsumerWidget {
         }
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(warrantyListProvider),
+          onRefresh: () async {
+          Haptics.medium();
+          ref.invalidate(warrantyListProvider);
+          await Future<void>.delayed(const Duration(milliseconds: 350));
+          Haptics.success();
+        },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: list.length,

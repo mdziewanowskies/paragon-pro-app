@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/polish_plurals.dart';
@@ -49,7 +50,12 @@ class StoresScreen extends ConsumerWidget {
             0, (s, e) => s + ((e['total_spent'] as num?)?.toDouble() ?? 0));
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(storeStatsProvider),
+          onRefresh: () async {
+            Haptics.medium();
+            ref.invalidate(storeStatsProvider);
+            await Future<void>.delayed(const Duration(milliseconds: 350));
+            Haptics.success();
+          },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: list.length + 1,

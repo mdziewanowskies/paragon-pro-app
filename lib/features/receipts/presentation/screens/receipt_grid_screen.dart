@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/receipt_image_cache.dart';
 import '../widgets/ksef_invoice_preview.dart';
 import '../widgets/receipt_grid_card.dart';
@@ -121,7 +122,11 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _loadReceipts(),
+        onRefresh: () async {
+          Haptics.medium();
+          await _loadReceipts();
+          Haptics.success();
+        },
         child: CustomScrollView(
           slivers: [
             // Search

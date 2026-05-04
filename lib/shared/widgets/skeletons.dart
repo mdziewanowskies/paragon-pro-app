@@ -142,3 +142,62 @@ class ReceiptListSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// Skeleton placeholder roughly matching a warranty / KSeF / family card:
+/// title row, two metadata rows, optional badge.
+class GenericCardSkeleton extends StatelessWidget {
+  const GenericCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Shimmer(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _Box(width: 40, height: 40, radius: 20),
+                SizedBox(width: 12),
+                Expanded(child: _Box(height: 16)),
+                SizedBox(width: 8),
+                _Box(width: 60, height: 22, radius: 11),
+              ],
+            ),
+            SizedBox(height: 12),
+            _Box(width: 220, height: 10),
+            SizedBox(height: 6),
+            _Box(width: 140, height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Generic vertical list of [GenericCardSkeleton]s — drop-in for any
+/// list screen that's still loading.
+class GenericListSkeleton extends StatelessWidget {
+  final int count;
+  final EdgeInsetsGeometry padding;
+  const GenericListSkeleton({
+    super.key,
+    this.count = 6,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: padding,
+      itemCount: count,
+      itemBuilder: (_, __) => const GenericCardSkeleton(),
+    );
+  }
+}

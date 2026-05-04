@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
@@ -150,7 +151,12 @@ class AnalyticsScreen extends ConsumerWidget {
         }
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(analyticsProvider),
+          onRefresh: () async {
+          Haptics.medium();
+          ref.invalidate(analyticsProvider);
+          await Future<void>.delayed(const Duration(milliseconds: 350));
+          Haptics.success();
+        },
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
