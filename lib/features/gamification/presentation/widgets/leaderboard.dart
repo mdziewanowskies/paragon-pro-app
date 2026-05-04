@@ -1,17 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../core/services/haptics.dart';
+import '../../../../shared/widgets/empty_state.dart';
 
 class Leaderboard extends StatelessWidget {
   final List<Map<String, dynamic>> entries;
 
   const Leaderboard({super.key, required this.entries});
 
+  bool get _onlyCurrentUser =>
+      entries.length == 1 &&
+      (entries.first['isCurrentUser'] as bool? ?? false);
+
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: Text('Brak danych rankingu')),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: EmptyState(
+            icon: Icons.emoji_events_rounded,
+            title: 'Ranking jeszcze pusty',
+            subtitle: 'Bądź pierwszy w swoim regionie!',
+            actionLabel: 'Zaproś znajomych',
+            onAction: () => _shareInvite(context),
+          ),
+        ),
+      );
+    }
+
+    if (_onlyCurrentUser) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: EmptyState(
+            icon: Icons.emoji_events_rounded,
+            title: 'Bądź pierwszy w swoim regionie!',
+            subtitle:
+                'Jak na razie tylko Ty jesteś w rankingu. Zaproś znajomych — razem łatwiej oszczędzać.',
+            actionLabel: 'Zaproś znajomych',
+            onAction: () => _shareInvite(context),
+          ),
         ),
       );
     }
@@ -117,6 +146,16 @@ class Leaderboard extends StatelessWidget {
           }).toList(),
         ),
       ),
+    );
+  }
+
+  Future<void> _shareInvite(BuildContext context) async {
+    Haptics.tap();
+    await Share.share(
+      'Dołącz do mnie w ParagonPro — śledź wydatki, zbieraj punkty i '
+      'ścigaj się ze znajomymi w rankingu! '
+      'https://paragonpro.app/invite',
+      subject: 'ParagonPro — Twój inteligentny asystent finansowy',
     );
   }
 }
