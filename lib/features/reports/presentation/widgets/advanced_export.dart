@@ -491,7 +491,7 @@ class _ExportOption extends StatelessWidget {
       title: Text(title,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-      trailing: isLoading ? null : const Icon(Icons.chevron_right),
+      trailing: isLoading ? null : const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );

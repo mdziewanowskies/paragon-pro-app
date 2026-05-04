@@ -130,7 +130,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           Align(
             alignment: Alignment.topRight,
             child: IconButton(
-              icon: const Icon(Icons.close, size: 28),
+              icon: const Icon(Icons.close_rounded, size: 28),
               onPressed: () => context.go('/'),
               padding: const EdgeInsets.all(16),
             ),
@@ -175,7 +175,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 _FeatureRow(Icons.all_inclusive_rounded,
                     'Nielimitowane skanowanie paragonów'),
                 _FeatureRow(
-                    Icons.auto_awesome, 'Zaawansowane rozpoznawanie AI'),
+                    Icons.auto_awesome_rounded, 'Zaawansowane rozpoznawanie AI'),
                 _FeatureRow(Icons.description_rounded,
                     'Pełna integracja z KSeF'),
                 _FeatureRow(Icons.analytics_rounded,

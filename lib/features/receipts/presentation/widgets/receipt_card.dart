@@ -76,7 +76,7 @@ class ReceiptCard extends StatelessWidget {
                             const SizedBox(width: 4),
                           if (receipt.aiProcessed)
                             _Badge(
-                              icon: Icons.auto_awesome,
+                              icon: Icons.auto_awesome_rounded,
                               label: 'AI',
                               color: AppColors.lightPrimary,
                             ),
@@ -190,7 +190,7 @@ class ReceiptCard extends StatelessWidget {
                   if (onAddWarranty != null)
                     TextButton.icon(
                       onPressed: onAddWarranty,
-                      icon: const Icon(Icons.add, size: 16),
+                      icon: const Icon(Icons.add_rounded, size: 16),
                       label: const Text('Gwarancja',
                           style: TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(

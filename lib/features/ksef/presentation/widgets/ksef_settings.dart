@@ -149,8 +149,8 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                       children: [
                         Icon(
                           (_connectionOk ?? true)
-                              ? Icons.check_circle
-                              : Icons.error,
+                              ? Icons.check_circle_rounded
+                              : Icons.error_rounded,
                           size: 14,
                           color:
                               (_connectionOk ?? true) ? Colors.green : Colors.red,
@@ -226,7 +226,7 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                      Icon(Icons.info_outline_rounded, color: Colors.amber, size: 18),
                       SizedBox(width: 8),
                       Text(
                         'Jak uzyskać token KSeF?',
@@ -273,7 +273,7 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                     : 'Wklej token z portalu KSeF',
                 suffixIcon: IconButton(
                   icon: Icon(
-                      _obscureToken ? Icons.visibility_off : Icons.visibility),
+                      _obscureToken ? Icons.visibility_off_rounded : Icons.visibility_rounded),
                   onPressed: () =>
                       setState(() => _obscureToken = !_obscureToken),
                 ),
@@ -307,8 +307,8 @@ class _KsefSettingsState extends ConsumerState<KsefSettings> {
                           )
                         : Icon(
                             _connectionOk == true
-                                ? Icons.check_circle
-                                : Icons.wifi_tethering,
+                                ? Icons.check_circle_rounded
+                                : Icons.wifi_tethering_rounded,
                             size: 18,
                           ),
                     label: Text(

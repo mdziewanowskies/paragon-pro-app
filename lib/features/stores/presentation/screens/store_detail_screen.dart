@@ -211,7 +211,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 right: 8,
                 child: IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close,
+                  icon: const Icon(Icons.close_rounded,
                       color: Colors.white, size: 28),
                   style:
                       IconButton.styleFrom(backgroundColor: Colors.black54),
@@ -281,7 +281,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             ),
             ListTile(
               leading:
-                  const Icon(Icons.delete_outline, color: Colors.red),
+                  const Icon(Icons.delete_outline_rounded, color: Colors.red),
               title: const Text('Usuń',
                   style: TextStyle(color: Colors.red)),
               onTap: () async {

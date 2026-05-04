@@ -216,7 +216,7 @@ class StoresScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.chevron_right,
+                        Icon(Icons.chevron_right_rounded,
                             size: 20,
                             color: Theme.of(context)
                                 .colorScheme

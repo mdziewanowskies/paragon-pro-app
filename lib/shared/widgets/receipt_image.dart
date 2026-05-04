@@ -83,7 +83,7 @@ class _ReceiptImageState extends State<ReceiptImage> {
             Container(
               color: Colors.grey[900],
               child: const Center(
-                child: Icon(Icons.receipt_long, size: 32, color: Colors.grey),
+                child: Icon(Icons.receipt_long_rounded, size: 32, color: Colors.grey),
               ),
             ),
       );
@@ -99,7 +99,7 @@ class _ReceiptImageState extends State<ReceiptImage> {
           Container(
             color: Colors.grey[900],
             child: const Center(
-              child: Icon(Icons.broken_image, size: 32, color: Colors.grey),
+              child: Icon(Icons.broken_image_rounded, size: 32, color: Colors.grey),
             ),
           ),
     );

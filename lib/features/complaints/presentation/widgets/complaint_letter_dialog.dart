@@ -261,7 +261,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close_rounded),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -307,13 +307,13 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
                     if (_step == 0)
                       ElevatedButton.icon(
                         onPressed: _generate,
-                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
                         label: const Text('Generuj pismo'),
                       ),
                     if (_step == 2) ...[
                       OutlinedButton.icon(
                         onPressed: _copyToClipboard,
-                        icon: const Icon(Icons.copy, size: 18),
+                        icon: const Icon(Icons.copy_rounded, size: 18),
                         label: const Text('Kopiuj'),
                       ),
                       const SizedBox(width: 8),
@@ -535,7 +535,7 @@ class _ComplaintLetterDialogState extends ConsumerState<ComplaintLetterDialog> {
       children: [
         Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 20),
+            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
             const SizedBox(width: 8),
             const Text(
               'Pismo wygenerowane',

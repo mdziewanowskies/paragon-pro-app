@@ -87,13 +87,13 @@ class WarrantyCard extends StatelessWidget {
             Row(
               children: [
                 _InfoChip(
-                  icon: Icons.calendar_today,
+                  icon: Icons.calendar_today_rounded,
                   label:
                       'Od: ${Formatters.formatDate(warranty.startDate)}',
                 ),
                 const SizedBox(width: 12),
                 _InfoChip(
-                  icon: Icons.event,
+                  icon: Icons.event_rounded,
                   label: 'Do: ${Formatters.formatDate(warranty.endDate)}',
                 ),
               ],

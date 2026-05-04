@@ -189,8 +189,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             label: 'Gwarancje',
           ),
           NavigationDestination(
-            icon: Icon(Icons.more_horiz),
-            selectedIcon: Icon(Icons.more_horiz),
+            icon: Icon(Icons.more_horiz_rounded),
+            selectedIcon: Icon(Icons.more_horiz_rounded),
             label: 'Więcej',
           ),
         ],
@@ -408,7 +408,7 @@ class _MoreTabState extends State<_MoreTab> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const Icon(Icons.arrow_back_rounded),
                   onPressed: () => setState(() => _selectedIndex = null),
                 ),
                 Text(
@@ -456,7 +456,7 @@ class _MoreTabState extends State<_MoreTab> {
               ),
               title: Text(item.label,
                   style: const TextStyle(fontWeight: FontWeight.w600)),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => setState(() => _selectedIndex = i),
             ),
           );
@@ -480,7 +480,7 @@ class _MoreTabState extends State<_MoreTab> {
             ),
             title: const Text('Profil',
                 style: TextStyle(fontWeight: FontWeight.w600)),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.go('/profile'),
           ),
         ),
@@ -501,7 +501,7 @@ class _MoreTabState extends State<_MoreTab> {
             ),
             title: const Text('Plany cenowe',
                 style: TextStyle(fontWeight: FontWeight.w600)),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.go('/pricing'),
           ),
         ),
@@ -522,7 +522,7 @@ class _MoreTabState extends State<_MoreTab> {
             ),
             title: const Text('Ustawienia',
                 style: TextStyle(fontWeight: FontWeight.w600)),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.go('/settings'),
           ),
         ),
@@ -566,7 +566,7 @@ class _SectionHeader extends StatelessWidget {
                       fontSize: 13,
                       color: Theme.of(context).colorScheme.primary,
                     )),
-                Icon(Icons.chevron_right,
+                Icon(Icons.chevron_right_rounded,
                     size: 18, color: Theme.of(context).colorScheme.primary),
               ],
             ),

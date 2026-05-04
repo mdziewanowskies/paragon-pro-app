@@ -73,7 +73,7 @@ class ReceiptGridCard extends StatelessWidget {
                             Icon(
                               receipt.isKsefInvoice
                                   ? Icons.description_rounded
-                                  : Icons.auto_awesome,
+                                  : Icons.auto_awesome_rounded,
                               color: Colors.white,
                               size: 10,
                             ),

@@ -16,7 +16,7 @@ class PricingScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/'),
         ),
         title: const Text('Plany cenowe'),
@@ -207,7 +207,7 @@ class _PlanCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle,
+                          const Icon(Icons.check_circle_rounded,
                               color: Colors.green, size: 18),
                           const SizedBox(width: 10),
                           Expanded(

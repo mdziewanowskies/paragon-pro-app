@@ -13,7 +13,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/'),
         ),
         title: const Text('Ustawienia'),
@@ -27,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
               leading: const Icon(Icons.language_rounded),
               title: const Text('Język'),
               subtitle: const Text('Polski'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -44,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
             child: ListTile(
               leading: const Icon(Icons.privacy_tip_outlined),
               title: const Text('Polityka prywatności'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () {
                 showDialog(
                   context: context,
@@ -84,7 +84,7 @@ class SettingsScreen extends ConsumerWidget {
             child: ListTile(
               leading: const Icon(Icons.description_outlined),
               title: const Text('Regulamin'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Regulamin w przygotowaniu')),
@@ -97,7 +97,7 @@ class SettingsScreen extends ConsumerWidget {
           // App version
           Card(
             child: ListTile(
-              leading: const Icon(Icons.info_outline),
+              leading: const Icon(Icons.info_outline_rounded),
               title: const Text('Wersja aplikacji'),
               subtitle: const Text('1.0.0'),
             ),

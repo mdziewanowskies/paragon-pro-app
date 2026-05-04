@@ -333,7 +333,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(Icons.close_rounded),
                       onPressed: () => setState(() {
                         _selectMode = false;
                         _selectedIds.clear();
@@ -351,10 +351,10 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Szukaj po nazwie sklepu lub produkcie...',
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear),
+                          icon: const Icon(Icons.clear_rounded),
                           onPressed: () {
                             _searchController.clear();
                             _loadReceipts();
@@ -508,7 +508,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.sort, size: 14,
+                                Icon(Icons.sort_rounded, size: 14,
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
@@ -948,7 +948,7 @@ class _ReceiptPreviewDialogState extends State<_ReceiptPreviewDialog> {
             right: 8,
             child: IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
               style: IconButton.styleFrom(backgroundColor: Colors.black54),
             ),
           ),

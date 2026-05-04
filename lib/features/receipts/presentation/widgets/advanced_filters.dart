@@ -65,7 +65,7 @@ class _AdvancedFiltersState extends State<AdvancedFilters> {
                     child: const Text('Resetuj', style: TextStyle(fontSize: 12)),
                   ),
                 Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
                   size: 20,
                 ),
               ],
@@ -203,7 +203,7 @@ class _DateField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           isDense: true,
-          suffixIcon: const Icon(Icons.calendar_today, size: 16),
+          suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
         ),
         child: Text(
           value != null

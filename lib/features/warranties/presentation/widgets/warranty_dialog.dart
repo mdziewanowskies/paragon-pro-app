@@ -228,7 +228,7 @@ class _WarrantyDialogState extends ConsumerState<WarrantyDialog> {
               ),
               decoration: const InputDecoration(
                 labelText: 'Data zakupu',
-                prefixIcon: Icon(Icons.calendar_today, size: 20),
+                prefixIcon: Icon(Icons.calendar_today_rounded, size: 20),
               ),
               enabled: false,
             ),
@@ -270,7 +270,7 @@ class _WarrantyDialogState extends ConsumerState<WarrantyDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline,
+                  Icon(Icons.info_outline_rounded,
                       size: 18,
                       color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),

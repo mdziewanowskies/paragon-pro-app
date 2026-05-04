@@ -299,14 +299,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           IconButton(
                             icon: Icon(_obscureIban
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
                                 size: 20),
                             onPressed: () => setState(
                                 () => _obscureIban = !_obscureIban),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.copy, size: 18),
+                            icon: const Icon(Icons.copy_rounded, size: 18),
                             onPressed: () {
                               if (_bankAccountController.text.isNotEmpty) {
                                 Clipboard.setData(ClipboardData(
@@ -507,7 +507,7 @@ class _QuickLink extends StatelessWidget {
             style: TextStyle(
                 color: color, fontWeight: FontWeight.w500, fontSize: 15)),
         trailing:
-            Icon(Icons.chevron_right, color: color ?? Colors.grey, size: 20),
+            Icon(Icons.chevron_right_rounded, color: color ?? Colors.grey, size: 20),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

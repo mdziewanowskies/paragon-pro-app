@@ -88,14 +88,14 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/'),
         ),
         title: const Text('Wszystkie paragony'),
         actions: [
           PopupMenuButton<String>(
             tooltip: 'Sortowanie',
-            icon: const Icon(Icons.sort),
+            icon: const Icon(Icons.sort_rounded),
             onSelected: (value) {
               switch (value) {
                 case 'date_desc':
@@ -137,10 +137,10 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Szukaj...',
-                    prefixIcon: const Icon(Icons.search),
+                    prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear_rounded),
                             onPressed: () {
                               _searchController.clear();
                               _loadReceipts();
@@ -290,7 +290,7 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
                           );
                         }
                         if (snap.data == null) {
-                          return const Icon(Icons.broken_image,
+                          return const Icon(Icons.broken_image_rounded,
                               size: 64, color: Colors.grey);
                         }
                         return Image.file(
@@ -307,7 +307,7 @@ class _ReceiptGridScreenState extends ConsumerState<ReceiptGridScreen> {
                 right: 8,
                 child: IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
                   style: IconButton.styleFrom(backgroundColor: Colors.black54),
                 ),
               ),
