@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
@@ -55,8 +57,11 @@ void main() async {
   // Initialize offline storage
   await OfflineSyncService.initialize();
 
-  // Initialize notifications
+  // Initialize notifications + retention schedules (F3-T1)
   await NotificationService.initialize();
+  // Idempotent — replaces any existing schedule. Always-on monthly
+  // ping; trial reminders are scheduled per purchase in the paywall.
+  unawaited(NotificationService.scheduleMonthlySummary());
 
   // Initialize in-app purchases (RevenueCat) — non-blocking
   try {

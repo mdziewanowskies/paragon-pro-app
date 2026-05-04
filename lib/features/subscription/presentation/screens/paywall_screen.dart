@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +9,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/feature_flags_service.dart';
 import '../../../../core/services/haptics.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/celebration_overlay.dart';
@@ -49,6 +53,23 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     });
   }
 
+  Future<void> _scheduleTrialRemindersIfApplicable() async {
+    try {
+      final status = await RevenueCatService.getStatus();
+      if (!status.isTrial || status.expirationDate == null) return;
+      await NotificationService.scheduleTrialEndReminder(
+        trialEndsAt: status.expirationDate!,
+        daysBefore: 3,
+      );
+      await NotificationService.scheduleTrialEndReminder(
+        trialEndsAt: status.expirationDate!,
+        daysBefore: 1,
+      );
+    } catch (e) {
+      debugPrint('schedule trial reminders failed: $e');
+    }
+  }
+
   Future<void> _purchasePackage(Package package) async {
     Haptics.medium();
     AnalyticsService.purchaseStarted(package.identifier);
@@ -58,6 +79,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       if (success && mounted) {
         ref.invalidate(revenueCatStatusProvider);
         AnalyticsService.purchaseCompleted(package.identifier);
+        // F3-T1: D-3 and D-1 trial reminders if this purchase triggered
+        // the free trial. Defer the lookup to next frame so RevenueCat
+        // has time to refresh customerInfo.
+        unawaited(_scheduleTrialRemindersIfApplicable());
         await CelebrationOverlay.show(
           context,
           title: 'Premium aktywowany!',

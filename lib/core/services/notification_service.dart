@@ -159,6 +159,95 @@ class NotificationService {
     }
   }
 
+  // ─── Retention schedulers (F3-T1, client-side) ───────────────
+
+  /// Schedule a notification N days before [trialEndsAt] reminding the
+  /// user their Premium trial is wrapping up. ID is stable so calling
+  /// twice replaces the previous schedule rather than stacking.
+  static Future<void> scheduleTrialEndReminder({
+    required DateTime trialEndsAt,
+    int daysBefore = 3,
+  }) async {
+    if (!_initialized) await initialize();
+    final id = 998000 + daysBefore;
+    final fireAt = trialEndsAt.subtract(Duration(days: daysBefore));
+    if (fireAt.isBefore(DateTime.now())) return;
+
+    try {
+      await _plugin.cancel(id);
+      await _plugin.zonedSchedule(
+        id,
+        daysBefore <= 1
+            ? 'Twój trial Premium kończy się jutro'
+            : 'Twój trial Premium kończy się za $daysBefore dni',
+        'Zachowaj nielimitowane skanowanie i pełną integrację KSeF — '
+            'zarządzaj subskrypcją w aplikacji.',
+        TZDateTime.from(fireAt, local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'trial_reminders',
+            'Przypomnienia o trialu',
+            channelDescription: 'Powiadomienia o końcu okresu próbnego Premium',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+          ),
+        ),
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+      debugPrint('Scheduled trial reminder #$id for $fireAt');
+    } catch (e) {
+      debugPrint('scheduleTrialEndReminder error: $e');
+    }
+  }
+
+  /// Schedule a recurring monthly summary on the 1st at the given hour.
+  static Future<void> scheduleMonthlySummary({int hour = 10}) async {
+    if (!_initialized) await initialize();
+    const id = 998500;
+
+    final now = DateTime.now();
+    var fire = DateTime(now.year, now.month + 1, 1, hour);
+    if (fire.isBefore(now)) {
+      fire = DateTime(fire.year, fire.month + 1, 1, hour);
+    }
+
+    try {
+      await _plugin.cancel(id);
+      await _plugin.zonedSchedule(
+        id,
+        'Twoje podsumowanie miesiąca jest gotowe',
+        'Sprawdź ile wydałeś w tym miesiącu i porównaj kategorie.',
+        TZDateTime.from(fire, local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'monthly_summary',
+            'Podsumowanie miesięczne',
+            channelDescription: 'Comiesięczne podsumowanie wydatków',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+          ),
+        ),
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      );
+      debugPrint('Scheduled monthly summary at $fire');
+    } catch (e) {
+      debugPrint('scheduleMonthlySummary error: $e');
+    }
+  }
+
   // ─── Instant notification (KSeF, achievements) ───────────
 
   /// Check if notification permission is granted
