@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'analytics_service.dart';
 import 'supabase_service.dart';
@@ -81,8 +83,29 @@ final subscriptionProvider =
         SubscriptionNotifier.new);
 
 class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
+  Timer? _refreshTimer;
+  StreamSubscription? _authSub;
+
   @override
   Future<SubscriptionInfo> build() async {
+    // Re-fetch the effective tier every 60s so that backend events
+    // we don't get a push for (family removal, premium expiry) still
+    // settle in the UI within a minute.
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => refresh(),
+    );
+    // Auth changes (login / logout) also force a fresh tier read.
+    _authSub?.cancel();
+    _authSub = SupabaseService.auth.onAuthStateChange.listen((_) {
+      refresh();
+    });
+    ref.onDispose(() {
+      _refreshTimer?.cancel();
+      _authSub?.cancel();
+    });
+
     final user = SupabaseService.auth.currentUser;
     if (user == null) return SubscriptionInfo.free();
     return await _fetchSubscription(user.id);
