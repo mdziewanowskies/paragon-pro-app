@@ -332,7 +332,8 @@ class _InvitationTile extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _Icon(kind: NotificationKind.system, override: '💌'),
+              const _Icon(
+                  kind: NotificationKind.system, overrideGlyph: '💌'),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -400,11 +401,11 @@ class _InvitationTile extends StatelessWidget {
 /// Emoji-based icon — keeps the kind→glyph mapping in one place.
 class _Icon extends StatelessWidget {
   final NotificationKind kind;
-  final String? override;
-  const _Icon({required this.kind, this.override});
+  final String? overrideGlyph;
+  const _Icon({required this.kind, this.overrideGlyph});
 
   String _glyph() {
-    if (override != null) return override!;
+    if (overrideGlyph != null) return overrideGlyph!;
     switch (kind) {
       case NotificationKind.warrantyExpiring:
         return '🛡️';
