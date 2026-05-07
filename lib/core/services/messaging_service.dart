@@ -146,8 +146,10 @@ class MessagingService {
   }
 
   /// Sends a test push to *this* user via the same Edge Function the
-  /// backend uses for invitations. If push doesn't arrive after this
-  /// returns true, the failure is server-side.
+  /// backend uses for invitations. The `test: true` flag tells
+  /// `send-native-push` to accept user JWT, look up the caller's
+  /// device tokens itself, and fan out — bypassing the service-role
+  /// gate that exists for the trigger-driven path.
   static Future<void> sendTestPushToSelf() async {
     final user = SupabaseService.auth.currentUser;
     if (user == null) {
@@ -156,7 +158,7 @@ class MessagingService {
     await SupabaseService.invokeFunction(
       'send-native-push',
       body: {
-        'user_ids': [user.id],
+        'test': true,
         'payload': {
           'title': 'Test push',
           'body': 'Jeśli to widzisz, FCM działa end-to-end.',
