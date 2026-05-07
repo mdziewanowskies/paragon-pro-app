@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/locked_feature_view.dart';
 import '../../../../shared/widgets/skeletons.dart';
+import '../../data/family_repository.dart';
 import '../widgets/family_lite_banner.dart';
 import '../widgets/family_management.dart';
 import '../widgets/family_stats.dart';
@@ -224,16 +228,16 @@ class FamilyScreen extends ConsumerWidget {
   }
 }
 
-class _NoFamilyView extends StatefulWidget {
+class _NoFamilyView extends ConsumerStatefulWidget {
   final VoidCallback onCreated;
 
   const _NoFamilyView({required this.onCreated});
 
   @override
-  State<_NoFamilyView> createState() => _NoFamilyViewState();
+  ConsumerState<_NoFamilyView> createState() => _NoFamilyViewState();
 }
 
-class _NoFamilyViewState extends State<_NoFamilyView> {
+class _NoFamilyViewState extends ConsumerState<_NoFamilyView> {
   final _nameController = TextEditingController();
   bool _isCreating = false;
 
@@ -243,72 +247,129 @@ class _NoFamilyViewState extends State<_NoFamilyView> {
     super.dispose();
   }
 
-  Future<void> _createFamily() async {
-    if (_nameController.text.trim().isEmpty) return;
+  /// Only Premium / Family tier accounts can create a family. Family
+  /// Lite is inherited so doesn't qualify here either.
+  bool _canCreate(SubscriptionInfo? sub) {
+    if (sub == null) return false;
+    return sub.tier == 'premium' || sub.tier == 'family';
+  }
 
+  Future<void> _createFamily() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      Haptics.error();
+      AppSnack.show(
+        context,
+        'Podaj nazwę rodziny.',
+        kind: SnackKind.warning,
+      );
+      return;
+    }
+
+    Haptics.tap();
     setState(() => _isCreating = true);
     try {
-      final userId = SupabaseService.auth.currentUser!.id;
-      final family = await SupabaseService.client.from('families').insert({
-        'name': _nameController.text.trim(),
-        'created_by': userId,
-      }).select().single();
-
-      await SupabaseService.client.from('family_members').insert({
-        'family_id': family['id'],
-        'user_id': userId,
-        'role': 'admin',
-      });
-
+      // Trigger add_family_creator_as_admin handles the family_members
+      // insert server-side; we only insert the family row.
+      await FamilyRepository.instance.createFamily(name);
+      // New family changes the user's effective tier — refresh.
+      try {
+        await ref.read(subscriptionProvider.notifier).refresh();
+      } catch (_) {}
+      _nameController.clear();
       widget.onCreated();
-    } catch (e) {
+      Haptics.success();
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Błąd: $e')));
+        AppSnack.show(
+          context,
+          'Rodzina "$name" utworzona!',
+          kind: SnackKind.success,
+        );
       }
+    } catch (e) {
+      Haptics.error();
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      String body;
+      if (msg.contains('insufficient_tier') ||
+          msg.contains('not allowed') ||
+          msg.contains('tier')) {
+        body = 'Tworzenie rodziny wymaga pakietu Premium lub Family.';
+      } else if (msg.contains('rate limit')) {
+        body = 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.';
+      } else {
+        body = 'Nie udało się utworzyć rodziny. Spróbuj ponownie.';
+      }
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Nie udało się utworzyć'),
+          content: Text(body),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Rozumiem'),
+            ),
+          ],
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isCreating = false);
     }
   }
 
+  void _openCreateDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Utwórz rodzinę'),
+        content: TextField(
+          controller: _nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Nazwa rodziny',
+            hintText: 'Np. Kowalscy',
+          ),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) {
+            Navigator.pop(ctx);
+            _createFamily();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Anuluj'),
+          ),
+          ElevatedButton(
+            onPressed: _isCreating
+                ? null
+                : () {
+                    Navigator.pop(ctx);
+                    _createFamily();
+                  },
+            child: const Text('Utwórz'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sub = ref.watch(subscriptionProvider).valueOrNull;
+    final canCreate = _canCreate(sub);
     return EmptyState(
       icon: Icons.family_restroom_rounded,
-      title: 'Brak rodziny',
-      subtitle:
-          'Utwórz rodzinę, aby wspólnie śledzić wydatki i dzielić paragony.',
-      actionLabel: 'Utwórz rodzinę',
-      onAction: () {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Utwórz rodzinę'),
-            content: TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nazwa rodziny',
-                hintText: 'Np. Kowalscy',
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Anuluj'),
-              ),
-              ElevatedButton(
-                onPressed: _isCreating
-                    ? null
-                    : () {
-                        _createFamily();
-                        Navigator.pop(ctx);
-                      },
-                child: const Text('Utwórz'),
-              ),
-            ],
-          ),
-        );
-      },
+      title: canCreate ? 'Brak rodziny' : 'Rodzina wymaga Premium',
+      subtitle: canCreate
+          ? 'Utwórz rodzinę, aby wspólnie śledzić wydatki i dzielić paragony.'
+          : 'Funkcja rodziny jest dostępna w pakiecie Premium lub Family. '
+              'Twoi członkowie automatycznie otrzymają plan Family Lite.',
+      actionLabel: canCreate ? 'Utwórz rodzinę' : 'Przejdź na Premium',
+      onAction: canCreate
+          ? _openCreateDialog
+          : () => context.go('/pricing'),
     );
   }
 }

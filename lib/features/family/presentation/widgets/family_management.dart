@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
-import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../notifications/data/notification_providers.dart';
+import '../../data/family_constants.dart';
+import '../../data/family_repository.dart';
 
 class FamilyManagement extends ConsumerStatefulWidget {
   final Map<String, dynamic> familyData;
@@ -21,8 +22,11 @@ class FamilyManagement extends ConsumerStatefulWidget {
   ConsumerState<FamilyManagement> createState() => _FamilyManagementState();
 }
 
+enum _InviteMode { email, username }
+
 class _FamilyManagementState extends ConsumerState<FamilyManagement> {
   final _inviteController = TextEditingController();
+  _InviteMode _mode = _InviteMode.email;
   bool _sending = false;
 
   @override
@@ -32,18 +36,10 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
   }
 
   Future<void> _sendInvite() async {
-    final email = _inviteController.text.trim().toLowerCase();
-    final emailError = Validators.email(email);
-    if (emailError != null) {
-      Haptics.error();
-      AppSnack.show(
-        context,
-        emailError,
-        kind: SnackKind.warning,
-      );
-      return;
-    }
     final familyId = widget.familyData['familyId'] as String?;
+    final familyMap = widget.familyData['family'] as Map<String, dynamic>?;
+    final familyName = (familyMap?['name'] as String?) ?? 'Rodzina';
+
     if (familyId == null || familyId.isEmpty) {
       AppSnack.show(
         context,
@@ -53,90 +49,117 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
       return;
     }
 
+    final raw = _inviteController.text.trim();
+    final validationError = _mode == _InviteMode.email
+        ? FamilyConstants.validateInviteEmail(raw)
+        : FamilyConstants.validateUsername(raw);
+    if (validationError != null) {
+      Haptics.error();
+      AppSnack.show(context, validationError, kind: SnackKind.warning);
+      return;
+    }
+
+    final repo = FamilyRepository.instance;
     Haptics.tap();
     setState(() => _sending = true);
     try {
-      // Try to look up the invited user up-front. If they already
-      // have an account we can link by user_id which makes the
-      // receiver-side query (`invited_user_id.eq.X`) match
-      // unconditionally, even if RLS blocks email-based reads.
-      String? invitedUserId;
-      try {
-        final hit = await SupabaseService.client
-            .from('profiles')
-            .select('user_id')
-            .eq('email', email)
-            .maybeSingle();
-        invitedUserId = hit?['user_id'] as String?;
-      } catch (_) {
-        // Profiles read can fail under RLS; not fatal.
-      }
-
-      // Same rejection that web uses: don't insert if there's already
-      // a pending invite for the same email + family.
-      final existing = await SupabaseService.client
-          .from('family_invitations')
-          .select('id')
-          .eq('family_id', familyId)
-          .eq('invited_email', email)
-          .eq('status', 'pending')
-          .maybeSingle();
-      if (existing != null) {
+      // Enforce the 5-person family cap client-side too — backend has
+      // a trigger that does the same check, but failing here saves a
+      // round-trip and a confusing PostgrestException.
+      final size = await repo.familySize(familyId);
+      if (size >= FamilyConstants.sizeLimit) {
         if (mounted) {
           AppSnack.show(
             context,
-            'Zaproszenie dla $email już oczekuje na akceptację.',
+            'Rodzina osiągnęła limit ${FamilyConstants.sizeLimit} '
+                'osób (członkowie + oczekujące zaproszenia).',
+            kind: SnackKind.warning,
+          );
+        }
+        return;
+      }
+
+      String? invitedUserId;
+      String invitedEmail = raw.toLowerCase();
+
+      if (_mode == _InviteMode.username) {
+        final foundId = await repo.findUserByUsername(raw);
+        if (foundId == null) {
+          if (mounted) {
+            AppSnack.show(
+              context,
+              'Nie znaleziono użytkownika "$raw".',
+              kind: SnackKind.warning,
+            );
+          }
+          return;
+        }
+        invitedUserId = foundId;
+        // Synthesize a placeholder email for the row when we only have
+        // the user_id — matches what the web does. Real email is
+        // resolved by the trigger / push handler from auth.users.
+        invitedEmail = '$raw@username.local';
+      } else {
+        // Email mode — try to pre-resolve to a user_id if they have a
+        // profile row, so the invitation_user_id column is set and the
+        // receiver-side query matches by id (RLS-friendly).
+        try {
+          final hit = await SupabaseService.client
+              .from('profiles')
+              .select('user_id')
+              .eq('email', invitedEmail)
+              .maybeSingle();
+          invitedUserId = hit?['user_id'] as String?;
+        } catch (_) {
+          // RLS may block this read — fine, we fall back to email-only.
+        }
+      }
+
+      // Self-invite check.
+      final me = SupabaseService.auth.currentUser;
+      if (invitedUserId != null && invitedUserId == me?.id) {
+        if (mounted) {
+          AppSnack.show(
+            context,
+            'Nie możesz zaprosić samego siebie.',
+            kind: SnackKind.warning,
+          );
+        }
+        return;
+      }
+
+      final hasPending = await repo.hasPendingInvite(
+        familyId: familyId,
+        email: invitedEmail,
+      );
+      if (hasPending) {
+        if (mounted) {
+          AppSnack.show(
+            context,
+            'Zaproszenie dla "$raw" już oczekuje na akceptację.',
             kind: SnackKind.info,
           );
         }
         return;
       }
 
-      final inserted = await SupabaseService.client
-          .from('family_invitations')
-          .insert({
-            'family_id': familyId,
-            'invited_by': SupabaseService.auth.currentUser!.id,
-            'invited_email': email,
-            if (invitedUserId != null) 'invited_user_id': invitedUserId,
-            'status': 'pending',
-            'expires_at': DateTime.now()
-                .add(const Duration(days: 7))
-                .toIso8601String(),
-          })
-          .select('id')
-          .single();
-
-      // Best-effort: if a `send-family-invitation` Edge Function exists
-      // (mirrors the web flow that sends the email + creates a
-      // notifications row), trigger it. Failing silently is OK — the
-      // invitation row already exists, the receiver can still see it
-      // in the bell on next 30s poll once they sign in.
-      try {
-        await SupabaseService.invokeFunction(
-          'send-family-invitation',
-          body: {
-            'invitation_id': inserted['id'],
-            'family_id': familyId,
-            'invited_email': email,
-          },
-        );
-      } catch (_) {
-        // Function not deployed or failed — proceed.
-      }
+      await repo.sendInvitation(
+        familyId: familyId,
+        familyName: familyName,
+        invitedEmail: invitedEmail,
+        invitedUserId: invitedUserId,
+      );
 
       _inviteController.clear();
       widget.onInviteSent?.call();
-      // Refresh sender's own notification panel so they see the
-      // pending invitation reflected immediately.
       ref.invalidate(notificationInvitationsProvider);
       Haptics.success();
       if (mounted) {
         AppSnack.show(
           context,
           invitedUserId != null
-              ? 'Zaproszenie wysłane do $email — zobaczy je w aplikacji.'
-              : 'Zaproszenie wysłane do $email. Wyślemy mu też email.',
+              ? 'Wysłano zaproszenie. Powiadomimy "$raw" pushem i mailem.'
+              : 'Wysłano zaproszenie na $raw. Wysłaliśmy też email z linkiem.',
           kind: SnackKind.success,
         );
       }
@@ -280,15 +303,66 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
             'Zaproś do rodziny',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          Text(
+            'Limit ${FamilyConstants.sizeLimit} osób (członkowie + '
+                'oczekujące zaproszenia).',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SegmentedButton<_InviteMode>(
+            segments: const [
+              ButtonSegment(
+                value: _InviteMode.email,
+                label: Text('Email'),
+                icon: Icon(Icons.alternate_email_rounded, size: 16),
+              ),
+              ButtonSegment(
+                value: _InviteMode.username,
+                label: Text('Nazwa'),
+                icon: Icon(Icons.person_rounded, size: 16),
+              ),
+            ],
+            selected: {_mode},
+            onSelectionChanged: (s) {
+              Haptics.selection();
+              setState(() {
+                _mode = s.first;
+                _inviteController.clear();
+              });
+            },
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _inviteController,
-                  decoration: const InputDecoration(
-                    hintText: 'Email lub nazwa użytkownika',
+                  keyboardType: _mode == _InviteMode.email
+                      ? TextInputType.emailAddress
+                      : TextInputType.text,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sending ? null : _sendInvite(),
+                  decoration: InputDecoration(
+                    hintText: _mode == _InviteMode.email
+                        ? 'np. anna@example.pl'
+                        : 'np. anna_kowalska',
                     isDense: true,
+                    prefixIcon: Icon(
+                      _mode == _InviteMode.email
+                          ? Icons.alternate_email_rounded
+                          : Icons.person_rounded,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),

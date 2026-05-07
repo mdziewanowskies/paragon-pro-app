@@ -81,19 +81,32 @@ class NotificationRepository {
     required String invitationId,
     required String familyId,
   }) async {
-    try {
-      await SupabaseService.rpc(
-        'accept_family_invitation_tx',
-        params: {
-          '_invitation_id': invitationId,
-          '_family_id': familyId,
-        },
-      );
-      return true;
-    } catch (e) {
-      debugPrint('acceptInvitation failed: $e');
-      return false;
+    // Up to 3 attempts with 800ms-per-attempt exponential backoff,
+    // matching the web implementation. accept_family_invitation_tx is
+    // transactional on the server but transient errors (network, RLS
+    // race) shouldn't surface to the user immediately.
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await SupabaseService.rpc(
+          'accept_family_invitation_tx',
+          params: {
+            '_invitation_id': invitationId,
+            '_family_id': familyId,
+          },
+        );
+        return true;
+      } catch (e) {
+        lastError = e;
+        debugPrint('acceptInvitation attempt $attempt failed: $e');
+        if (attempt < 3) {
+          await Future<void>.delayed(
+              Duration(milliseconds: 800 * attempt));
+        }
+      }
     }
+    debugPrint('acceptInvitation gave up: $lastError');
+    return false;
   }
 
   Future<bool> rejectInvitation(String invitationId) async {
