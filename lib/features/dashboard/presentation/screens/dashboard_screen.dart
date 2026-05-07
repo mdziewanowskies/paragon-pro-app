@@ -7,7 +7,6 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../../core/services/profile_service.dart';
-import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/skeletons.dart';
@@ -113,11 +112,10 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _currentTab = 0;
 
-  // "Więcej" sub-screens. KSeF lives in the bottom bar for Premium
-  // users only; Family lives here when the user has family_sharing
-  // (Family Lite or Premium). Items are filtered in build() based on
-  // the current subscription so Free users never see locked entries.
-  static const _moreItemAll = [
+  // "Więcej" sub-screens. KSeF and Family are always visible — when
+  // the user lacks the tier, the destination screen renders a locked
+  // upsell instead of being hidden (V3 'naturalny funnel' pattern).
+  static const _moreItems = [
     _MoreItem(Icons.store_rounded, 'Sklepy', _MoreItemKey.stores),
     _MoreItem(Icons.analytics_rounded, 'Analityka', _MoreItemKey.analytics),
     _MoreItem(
@@ -148,59 +146,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sub = ref.watch(subscriptionProvider).valueOrNull;
-    // Tier-gated affordances. Premium gets KSeF in the bottom bar.
-    // Family Lite + Premium get the Family entry in More. Free sees
-    // neither.
-    final hasKsef = sub?.isPremium ?? false;
-    final hasFamily = sub?.familySharingEnabled ?? false;
-
-    final moreItems = _moreItemAll.where((it) {
-      if (it.key == _MoreItemKey.family && !hasFamily) return false;
-      return true;
-    }).toList();
-
-    final tabChildren = <Widget>[
-      _HomeTab(),
-      const ReceiptListScreen(),
-      if (hasKsef) const KsefPanelScreen(),
-      const WarrantyListScreen(),
-      _MoreTab(items: moreItems),
-    ];
-
-    final tabDestinations = <NavigationDestination>[
-      const NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home_rounded),
-        label: 'Home',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.receipt_long_outlined),
-        selectedIcon: Icon(Icons.receipt_long_rounded),
-        label: 'Paragony',
-      ),
-      if (hasKsef)
-        const NavigationDestination(
-          icon: Icon(Icons.description_outlined),
-          selectedIcon: Icon(Icons.description_rounded),
-          label: 'KSeF',
-        ),
-      const NavigationDestination(
-        icon: Icon(Icons.shield_outlined),
-        selectedIcon: Icon(Icons.shield_rounded),
-        label: 'Gwarancje',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.more_horiz_rounded),
-        selectedIcon: Icon(Icons.more_horiz_rounded),
-        label: 'Więcej',
-      ),
-    ];
-
-    // Selected index might point to a tab that no longer exists
-    // (e.g. the user just churned out of Premium). Clamp.
-    final safeIndex = _currentTab.clamp(0, tabChildren.length - 1);
-
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -213,19 +158,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: child,
           ),
           child: IndexedStack(
-            key: ValueKey(safeIndex),
-            index: safeIndex,
-            children: tabChildren,
+            key: ValueKey(_currentTab),
+            index: _currentTab,
+            children: [
+              _HomeTab(),
+              const ReceiptListScreen(),
+              const KsefPanelScreen(),
+              const WarrantyListScreen(),
+              _MoreTab(items: _moreItems),
+            ],
           ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: safeIndex,
+        selectedIndex: _currentTab,
         onDestinationSelected: (i) {
           if (i != _currentTab) Haptics.selection();
           setState(() => _currentTab = i);
         },
-        destinations: tabDestinations,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'Paragony',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description_rounded),
+            label: 'KSeF',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shield_outlined),
+            selectedIcon: Icon(Icons.shield_rounded),
+            label: 'Gwarancje',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.more_horiz_rounded),
+            selectedIcon: Icon(Icons.more_horiz_rounded),
+            label: 'Więcej',
+          ),
+        ],
       ),
     );
   }

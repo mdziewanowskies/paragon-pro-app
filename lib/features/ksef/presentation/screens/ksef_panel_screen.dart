@@ -6,10 +6,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/utils/share_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/haptics.dart';
+import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/cupertino_date_picker.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/locked_feature_view.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/ksef_settings.dart';
 import '../widgets/ksef_invoice_table.dart';
@@ -133,6 +135,28 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // KSeF is Premium-only. Free + Family Lite users hit a soft
+    // upsell screen instead of the panel — keeps the feature visible
+    // in nav for the natural funnel without leaking access.
+    final sub = ref.watch(subscriptionProvider).valueOrNull;
+    if (sub != null && !sub.isPremium) {
+      return const LockedFeatureView(
+        icon: Icons.description_rounded,
+        title: 'KSeF — Twój Asystent VAT',
+        description:
+            'Synchronizuj faktury z Krajowego Systemu e-Faktur, '
+            'pobieraj XML-e i ogarniaj VAT bez ręcznej roboty.',
+        perks: [
+          'Automatyczna synchronizacja faktur z KSeF API',
+          'Eksport XML i pism reklamacyjnych',
+          'Podsumowanie VAT w czasie rzeczywistym',
+          'Bez limitów paragonów i pełna analityka',
+        ],
+        ctaLabel: 'Odblokuj KSeF z Premium',
+        analyticsEvent: 'paywall_view_ksef',
+      );
+    }
+
     final profile = ref.watch(profileProvider);
     final invoices = ref.watch(ksefInvoicesProvider);
     final hasKsefToken = profile.value?.ksefToken != null &&

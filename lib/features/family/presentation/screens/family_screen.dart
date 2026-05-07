@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/locked_feature_view.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/family_lite_banner.dart';
 import '../widgets/family_management.dart';
@@ -97,8 +99,31 @@ class FamilyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final family = ref.watch(familyProvider);
+    // Family Sharing is Family Lite + Premium only. Free users hit a
+    // soft upsell instead of the empty management UI.
+    final sub = ref.watch(subscriptionProvider).valueOrNull;
     final invitations = ref.watch(pendingInvitationsProvider);
+    final hasPendingInvite =
+        (invitations.valueOrNull ?? const []).isNotEmpty;
+    if (sub != null && !sub.familySharingEnabled && !hasPendingInvite) {
+      return const LockedFeatureView(
+        icon: Icons.family_restroom_rounded,
+        title: 'Rodzina — wspólne paragony i wydatki',
+        description:
+            'Zaproś bliskich, dzielcie się paragonami, śledźcie '
+            'wydatki rodziny i zbierajcie punkty razem w gamifikacji.',
+        perks: [
+          'Do 5 osób w jednej rodzinie Premium',
+          'Wspólny widok wydatków i kategorii',
+          'Rodzinna gamifikacja i ranking',
+          'Każdy członek rodziny dostaje Family Lite (15 paragonów/mies)',
+        ],
+        ctaLabel: 'Odblokuj Rodzinę z Premium',
+        analyticsEvent: 'paywall_view_family',
+      );
+    }
+
+    final family = ref.watch(familyProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
