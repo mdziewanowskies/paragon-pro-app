@@ -151,7 +151,12 @@ class RevenueCatService {
   static Future<Offerings?> getOfferings() async {
     if (!_initialized) await initialize();
     try {
-      return await Purchases.getOfferings();
+      final offerings = await Purchases.getOfferings();
+      debugPrint('RC offerings keys: ${offerings.all.keys.toList()}');
+      debugPrint('RC current offering: ${offerings.current?.identifier}');
+      debugPrint(
+          'RC current packages: ${offerings.current?.availablePackages.map((p) => "${p.identifier}->${p.storeProduct.identifier}").toList()}');
+      return offerings;
     } catch (e) {
       debugPrint('getOfferings error: $e');
       return null;
