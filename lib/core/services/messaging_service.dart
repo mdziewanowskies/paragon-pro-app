@@ -81,9 +81,11 @@ class MessagingService {
     }
   }
 
-  /// Upserts the device's FCM token onto the backend so push triggers
-  /// can target this install. Table name is `user_devices` matching
-  /// the typical Supabase pattern — confirm w/ web team.
+  /// Upserts the device's FCM token into `device_push_tokens` so the
+  /// `send-native-push` Edge Function can target this install.
+  /// Schema (per backend): id, user_id, token, platform, user_agent,
+  /// created_at, last_used_at — RLS lets users see/edit/delete only
+  /// their own rows.
   static Future<void> _uploadToken(String token) async {
     final user = SupabaseService.auth.currentUser;
     if (user == null) {
@@ -94,14 +96,14 @@ class MessagingService {
         ? 'ios'
         : (!kIsWeb && Platform.isAndroid ? 'android' : 'web');
     try {
-      await SupabaseService.client.from('user_devices').upsert(
+      await SupabaseService.client.from('device_push_tokens').upsert(
         {
           'user_id': user.id,
-          'fcm_token': token,
+          'token': token,
           'platform': platform,
-          'updated_at': DateTime.now().toIso8601String(),
+          'last_used_at': DateTime.now().toIso8601String(),
         },
-        onConflict: 'fcm_token',
+        onConflict: 'token',
       );
       debugPrint('FCM token uploaded for ${user.id} ($platform)');
     } catch (e) {

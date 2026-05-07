@@ -158,8 +158,10 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
         AppSnack.show(
           context,
           invitedUserId != null
-              ? 'Wysłano zaproszenie. Powiadomimy "$raw" pushem i mailem.'
-              : 'Wysłano zaproszenie na $raw. Wysłaliśmy też email z linkiem.',
+              ? 'Zaproszenie wysłane. Otrzyma powiadomienie push '
+                  'i zobaczy je w aplikacji.'
+              : 'Zaproszenie wysłane na $raw. Zobaczy je gdy zaloguje '
+                  'się w ParagonPro.',
           kind: SnackKind.success,
         );
       }

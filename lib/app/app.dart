@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/notifications/data/realtime_listeners.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -10,6 +11,10 @@ class ParagonProApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    // Boot Supabase Realtime channels for notifications + family
+    // membership. Replaces 30s/60s polling — `notificationsProvider`
+    // and `subscriptionProvider` get invalidated as rows change.
+    ref.watch(realtimeListenersProvider);
 
     return MaterialApp.router(
       title: 'ParagonPro',

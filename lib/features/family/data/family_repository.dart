@@ -116,8 +116,12 @@ class FamilyRepository {
     return row['id'] as String;
   }
 
-  /// Insert + fire-and-forget `send-push-notification` Edge Function
-  /// when we know the receiver's user_id. Returns the invitation row.
+  /// Pure direct INSERT — backend trigger `notify_family_invitation`
+  /// creates the notification row, which in turn triggers
+  /// `trigger_push_on_notify` → `push-on-notify` Edge Function →
+  /// fan-out to `send-native-push` (FCM) + `send-push-notification`
+  /// (Web Push). We don't call those functions ourselves: doing so
+  /// would dispatch a second push for the same event.
   Future<Map<String, dynamic>> sendInvitation({
     required String familyId,
     required String familyName,
@@ -139,34 +143,7 @@ class FamilyRepository {
         })
         .select()
         .single();
-
-    if (invitedUserId != null) {
-      // Best-effort native push — backend Edge Function fans out to
-      // FCM (mobile) and Web Push (browser) when invoked.
-      unawaitedPush(invitedUserId, familyName);
-    }
-
     return Map<String, dynamic>.from(inserted);
-  }
-
-  void unawaitedPush(String userId, String familyName) {
-    SupabaseService.invokeFunction(
-      'send-push-notification',
-      body: {
-        'user_ids': [userId],
-        'payload': {
-          'title': 'Zaproszenie do rodziny',
-          'body': 'Zostałeś zaproszony do rodziny „$familyName".',
-          'url': '/dashboard?tab=family',
-          'tag': 'family-invitation',
-        },
-      },
-    ).catchError((Object e) {
-      debugPrint('send-push-notification failed: $e');
-      // Edge function returns a wrapped FunctionResponse on success,
-      // any value is fine since we ignore the result here.
-      throw e;
-    }).then((_) {}, onError: (_) {});
   }
 
   Future<bool> hasPendingInvite({
