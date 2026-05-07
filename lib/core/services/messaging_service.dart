@@ -70,10 +70,17 @@ class MessagingService {
       _authSub?.cancel();
       _authSub =
           SupabaseService.auth.onAuthStateChange.listen((event) async {
-        // Only react to a fresh session — token refresh / sign-out
-        // events fire here too and we don't want to spam.
-        if (event.event == AuthChangeEvent.signedIn) {
-          debugPrint('Auth signed in — uploading FCM token');
+        // React to anything that means "we now have a user we didn't
+        // have before". `initialSession` fires on cold start with a
+        // restored session — without it, returning users never get
+        // their token re-uploaded and `send-native-push` has nothing
+        // to target.
+        final isNewSession = event.event == AuthChangeEvent.signedIn ||
+            event.event == AuthChangeEvent.initialSession ||
+            event.event == AuthChangeEvent.tokenRefreshed;
+        if (isNewSession && SupabaseService.auth.currentUser != null) {
+          debugPrint(
+              'Auth ${event.event.name} — uploading FCM token');
           final t = _lastToken ?? await _fetchTokenWithRetry();
           _lastToken = t;
           if (t != null) await _uploadToken(t);

@@ -35,7 +35,9 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase (FCM + Analytics + Crashlytics)
+  // Initialize Firebase (Analytics + Crashlytics first; messaging is
+  // wired AFTER Supabase so the token uploader sees a restored
+  // session on cold start).
   try {
     await Firebase.initializeApp();
     await AnalyticsService.initialize();
@@ -47,13 +49,23 @@ void main() async {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
-    await MessagingService.initialize();
   } catch (e) {
     debugPrint('Firebase init failed (non-blocking): $e');
   }
 
-  // Initialize Supabase
+  // Initialize Supabase BEFORE MessagingService so the FCM token
+  // uploader sees a restored session immediately and writes to
+  // device_push_tokens on cold start.
   await SupabaseService.initialize();
+
+  // Now wire FCM — by this point auth.currentUser is populated when
+  // the user has a persisted session, so the initial _uploadToken
+  // actually lands.
+  try {
+    await MessagingService.initialize();
+  } catch (e) {
+    debugPrint('MessagingService init failed (non-blocking): $e');
+  }
 
   // Initialize offline storage
   await OfflineSyncService.initialize();
