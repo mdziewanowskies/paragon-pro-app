@@ -10,6 +10,7 @@ import '../../../../core/services/haptics.dart';
 import '../../../../core/utils/auth_error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/google_sign_in_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -310,6 +311,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                         ),
                                 ),
                               ),
+                              const SizedBox(height: 18),
+                              const OrDivider(),
+                              const SizedBox(height: 16),
+                              const GoogleSignInButton(),
                             ],
                           ),
                         ),

@@ -66,6 +66,18 @@ class AuthErrorMapper {
       return 'Serwer nie odpowiedział w wyznaczonym czasie. Spróbuj ponownie.';
     }
 
+    // OAuth / external-browser failures (no specific Supabase code).
+    if (raw.contains('could not launch') ||
+        raw.contains('no_browser') ||
+        raw.contains('cannot launch')) {
+      return 'Nie udało się otworzyć okna logowania. Sprawdź czy masz '
+          'zainstalowaną przeglądarkę i spróbuj ponownie.';
+    }
+    if (raw.contains('oauth') || raw.contains('provider')) {
+      return 'Logowanie zewnętrzne chwilowo niedostępne. Spróbuj ponownie '
+          'lub użyj loginu hasłem.';
+    }
+
     return 'Coś poszło nie tak. Spróbuj ponownie później.';
   }
 }

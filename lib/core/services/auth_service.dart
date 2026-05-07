@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'analytics_service.dart';
 import 'supabase_service.dart';
 
@@ -44,6 +45,18 @@ class AuthService {
   Future<void> signOut() async {
     await AnalyticsService.setUserId(null);
     await SupabaseService.auth.signOut();
+  }
+
+  /// Launches the Google OAuth flow via Supabase. On iOS this surfaces an
+  /// in-app SFAuthenticationSession sheet; on Android a Custom Tab. The
+  /// session lands back in the app via the [_emailCallback] deep link and
+  /// is picked up by the existing `onAuthStateChange` listener.
+  Future<bool> signInWithGoogle() async {
+    return await SupabaseService.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: _emailCallback,
+      authScreenLaunchMode: LaunchMode.inAppBrowserView,
+    );
   }
 
   /// Sends a password reset email through Supabase. The link inside

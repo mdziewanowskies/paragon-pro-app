@@ -12,6 +12,7 @@ import '../../../../core/utils/auth_error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/google_sign_in_button.dart';
 import '../widgets/forgot_password_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -298,6 +299,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ),
                                 ),
                               ),
+                              const SizedBox(height: 18),
+                              const OrDivider(),
+                              const SizedBox(height: 16),
+                              const GoogleSignInButton(),
                             ],
                           ),
                         ),
