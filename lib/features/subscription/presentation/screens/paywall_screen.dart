@@ -11,6 +11,7 @@ import '../../../../core/services/feature_flags_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/purchase_service.dart';
+import '../../../../core/services/subscription_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/celebration_overlay.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
@@ -39,6 +40,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   void initState() {
     super.initState();
     _resolveVariant();
+    // Pull the freshest tier from Stripe (and respect any
+    // manual_tier_override) the moment the user opens the paywall.
+    Future.microtask(() async {
+      try {
+        await ref.read(subscriptionProvider.notifier).hardRefresh();
+      } catch (_) {}
+    });
   }
 
   Future<void> _resolveVariant() async {
@@ -79,6 +87,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       if (success && mounted) {
         ref.invalidate(revenueCatStatusProvider);
         AnalyticsService.purchaseCompleted(package.identifier);
+        // Force a Supabase-side sync so user_subscriptions.tier picks
+        // up the new state (RevenueCat → backend webhook → DB) and
+        // any manual_tier_override stays respected.
+        unawaited(
+          ref.read(subscriptionProvider.notifier).hardRefresh(),
+        );
         // F3-T1: D-3 and D-1 trial reminders if this purchase triggered
         // the free trial. Defer the lookup to next frame so RevenueCat
         // has time to refresh customerInfo.

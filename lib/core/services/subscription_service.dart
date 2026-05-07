@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'analytics_service.dart';
 import 'supabase_service.dart';
@@ -85,6 +86,7 @@ final subscriptionProvider =
 class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
   Timer? _refreshTimer;
   StreamSubscription? _authSub;
+  bool _didSyncFromStripeOnce = false;
 
   @override
   Future<SubscriptionInfo> build() async {
@@ -96,9 +98,11 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
       const Duration(seconds: 60),
       (_) => refresh(),
     );
-    // Auth changes (login / logout) also force a fresh tier read.
+    // Auth changes (login / logout) also force a fresh tier read +
+    // a one-shot Stripe sync.
     _authSub?.cancel();
     _authSub = SupabaseService.auth.onAuthStateChange.listen((_) {
+      _didSyncFromStripeOnce = false;
       refresh();
     });
     ref.onDispose(() {
@@ -108,7 +112,48 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
 
     final user = SupabaseService.auth.currentUser;
     if (user == null) return SubscriptionInfo.free();
+
+    // First read of this session syncs Stripe state into
+    // user_subscriptions (and respects manual_tier_override).
+    // Subsequent 60s refreshes only re-read the DB — they don't
+    // re-hit Stripe, which would burn rate limit and add latency.
+    if (!_didSyncFromStripeOnce) {
+      _didSyncFromStripeOnce = true;
+      await _syncFromStripe();
+    }
     return await _fetchSubscription(user.id);
+  }
+
+  /// Forces a Stripe → DB sync before re-reading. Use after the user
+  /// returns from Stripe checkout, opens the paywall, or pulls to
+  /// refresh the subscription card.
+  Future<void> hardRefresh() async {
+    final user = SupabaseService.auth.currentUser;
+    if (user == null) {
+      state = AsyncData(SubscriptionInfo.free());
+      return;
+    }
+    await _syncFromStripe();
+    state = AsyncData(await _fetchSubscription(user.id));
+  }
+
+  /// Invokes the `check-subscription` Edge Function. The function:
+  /// 1. Reads manual_tier_override (admin-set) from user_subscriptions
+  /// 2. Looks up the user in Stripe; if active sub, derives tier from
+  ///    price_id; otherwise falls back to free
+  /// 3. effectiveTier = manual_tier_override ?? syncedTier
+  /// 4. Writes the result back to user_subscriptions.tier
+  ///
+  /// We never touch `tier` or `manual_tier_override` directly from
+  /// the client — only this function does.
+  Future<void> _syncFromStripe() async {
+    try {
+      await SupabaseService.invokeFunction('check-subscription');
+    } catch (e) {
+      // Network blip / function not deployed — fine, we'll fall back
+      // to whatever the DB already has.
+      debugPrint('check-subscription sync skipped: $e');
+    }
   }
 
   Future<SubscriptionInfo> _fetchSubscription(String userId) async {
