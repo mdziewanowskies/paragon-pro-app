@@ -165,31 +165,6 @@ class MessagingService {
       },
     );
   }
-}
-
-class PushDiagnostics {
-  final String platform;
-  final String authStatus;
-  final String? apnsToken;
-  final String? fcmToken;
-  final bool backendRowFound;
-  final String? backendRowId;
-  final String? userId;
-
-  const PushDiagnostics({
-    required this.platform,
-    required this.authStatus,
-    this.apnsToken,
-    this.fcmToken,
-    this.backendRowFound = false,
-    this.backendRowId,
-    this.userId,
-  });
-
-  bool get permissionGranted =>
-      authStatus == 'authorized' || authStatus == 'provisional';
-  bool get hasFcmToken => fcmToken != null && fcmToken!.isNotEmpty;
-  bool get hasApnsToken => apnsToken != null && apnsToken!.isNotEmpty;
 
   static Future<String?> getToken() async {
     try {
@@ -302,4 +277,29 @@ class PushDiagnostics {
       debugPrint('local-notification render failed: $e');
     }
   }
+}
+
+class PushDiagnostics {
+  final String platform;
+  final String authStatus;
+  final String? apnsToken;
+  final String? fcmToken;
+  final bool backendRowFound;
+  final String? backendRowId;
+  final String? userId;
+
+  const PushDiagnostics({
+    required this.platform,
+    required this.authStatus,
+    this.apnsToken,
+    this.fcmToken,
+    this.backendRowFound = false,
+    this.backendRowId,
+    this.userId,
+  });
+
+  bool get permissionGranted =>
+      authStatus == 'authorized' || authStatus == 'provisional';
+  bool get hasFcmToken => fcmToken != null && fcmToken!.isNotEmpty;
+  bool get hasApnsToken => apnsToken != null && apnsToken!.isNotEmpty;
 }
