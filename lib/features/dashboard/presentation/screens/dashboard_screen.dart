@@ -21,6 +21,7 @@ import '../../../analytics/presentation/screens/analytics_screen.dart';
 import '../../../gamification/presentation/screens/gamification_screen.dart';
 import '../../../family/presentation/screens/family_screen.dart';
 import '../../../ksef/presentation/screens/ksef_panel_screen.dart';
+import '../../../notifications/presentation/widgets/notification_bell.dart';
 import '../../../reports/presentation/screens/reports_screen.dart';
 import '../../../stores/presentation/screens/stores_screen.dart';
 
@@ -226,6 +227,7 @@ class _HomeTab extends ConsumerWidget {
           backgroundColor: AppColors.darkBackground,
           title: const AppLogoWithText(logoSize: 32, fontSize: 18),
           actions: [
+            const NotificationBell(),
             IconButton(
               icon: const Icon(Icons.person_rounded),
               onPressed: () => context.go('/profile'),

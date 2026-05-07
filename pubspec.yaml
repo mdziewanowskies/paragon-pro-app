@@ -76,6 +76,9 @@ dependencies:
   # Celebratory confetti for milestones (premium purchase, first receipt)
   confetti: ^0.7.0
 
+  # Polish-localized relative timestamps for the notifications panel
+  timeago: ^3.7.0
+
 dependency_overrides:
   # Pin to version that doesn't use objective_c FFI (fixes iOS 26 simulator crash)
   path_provider_foundation: 2.4.1
