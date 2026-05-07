@@ -14,21 +14,6 @@ class AppConstants {
     defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4emltb2N5aWJsYnlveGp4bWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjU2MTksImV4cCI6MjA3NzY0MTYxOX0.4mBr-eLUfhGjeDGfzReS7rXRaFouyH8wrJgSLE1ogso',
   );
 
-  // Google OAuth client IDs (Google Cloud Console → APIs & Services → Credentials).
-  // Web Client ID is the one you also configured in Supabase Auth →
-  // Providers → Google — Supabase verifies that the id_token's `aud`
-  // claim matches it. Override at build time with --dart-define if needed.
-  static const String googleWebClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue:
-        '489859737052-18phrv1qt3lh5dcouofn62jatntv6kom.apps.googleusercontent.com',
-  );
-  static const String googleIosClientId = String.fromEnvironment(
-    'GOOGLE_IOS_CLIENT_ID',
-    defaultValue:
-        '489859737052-eo8mjhc2apsbu5u2vo28smr65vlu0j8m.apps.googleusercontent.com',
-  );
-
   // Storage
   static const String receiptsBucket = 'receipts';
 

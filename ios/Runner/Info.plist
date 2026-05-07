@@ -72,16 +72,6 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>google-signin</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.489859737052-eo8mjhc2apsbu5u2vo28smr65vlu0j8m</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
 			<string>supabase-auth-callback</string>
 			<key>CFBundleURLSchemes</key>
 			<array>

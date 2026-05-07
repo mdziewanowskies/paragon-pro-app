@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +11,7 @@ import '../../../../core/services/profile_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../widgets/forgot_password_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -40,6 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     Haptics.tap();
+    FocusScope.of(context).unfocus();
 
     setState(() => _isLoading = true);
     try {
@@ -58,50 +59,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _loginWithGoogle() async {
-    Haptics.tap();
-    setState(() => _isLoading = true);
-    try {
-      final authService = ref.read(authServiceProvider);
-      final response = await authService.signInWithGoogle();
-      if (response == null) return; // user cancelled
-      Haptics.success();
-      AnalyticsService.loginSuccess('google');
-      await _navigatePostLogin();
-    } catch (e, stackTrace) {
-      _handleAuthError(e, stackTrace);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loginWithApple() async {
-    Haptics.tap();
-    setState(() => _isLoading = true);
-    try {
-      final authService = ref.read(authServiceProvider);
-      final response = await authService.signInWithApple();
-      if (response == null) return;
-      Haptics.success();
-      AnalyticsService.loginSuccess('apple');
-      await _navigatePostLogin();
-    } catch (e, stackTrace) {
-      _handleAuthError(e, stackTrace);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _navigatePostLogin() async {
-    // Once the Supabase session lands, the router's refreshListenable
-    // can pop /login synchronously — by the time refresh() resolves
-    // this widget may already be disposed. Bail early on every access
-    // to ref/context so we don't throw StateError from ref.read.
     if (!mounted) return;
     try {
       await ref.read(profileProvider.notifier).refresh();
     } catch (_) {
-      return; // disposed mid-await
+      return;
     }
     if (!mounted) return;
     final profile = ref.read(profileProvider).value;
@@ -111,6 +74,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } else {
       context.go('/');
     }
+  }
+
+  Future<void> _openForgotPassword() async {
+    Haptics.tap();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ForgotPasswordSheet(
+        prefilledEmail: _emailController.text.trim(),
+      ),
+    );
   }
 
   void _handleAuthError(Object e, StackTrace stackTrace) {
@@ -138,10 +117,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (msgLower.contains('email not confirmed')) {
       return 'Potwierdź email przed logowaniem';
     }
-    if (msgLower.contains('socketexception') || msgLower.contains('connection refused')) {
+    if (msgLower.contains('socketexception') ||
+        msgLower.contains('connection refused')) {
       return 'Brak połączenia z serwerem. Sprawdź internet.';
     }
-    // In debug mode show full error
     if (kDebugMode) {
       return msg.length > 200 ? msg.substring(0, 200) : msg;
     }
@@ -150,154 +129,204 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.heroGradient),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 400),
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: AppColors.mediumShadow,
-                ),
-                child: Form(
-                  key: _formKey,
+      // Ambient gradient background; the form sits on a clean card.
+      body: Stack(
+        children: [
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(gradient: AppColors.heroGradient),
+            ),
+          ),
+          // Decorative blurred blobs.
+          Positioned(
+            top: -120,
+            right: -80,
+            child: _Blob(
+              color: Colors.white.withValues(alpha: 0.18),
+              size: 280,
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            left: -60,
+            child: _Blob(
+              color: Colors.black.withValues(alpha: 0.18),
+              size: 220,
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const AppLogo(size: 56),
-                      const SizedBox(height: 12),
+                      // ── Hero ───────────────────────────────────────
+                      const AppLogo(size: 64),
+                      const SizedBox(height: 16),
                       Text(
-                        'Zaloguj się',
-                        style:
-                            Theme.of(context).textTheme.headlineMedium,
+                        'Witaj z powrotem',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        'Witaj z powrotem!',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
+                        'Zaloguj się, aby zarządzać swoimi paragonami',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
                       ),
                       const SizedBox(height: 28),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
+
+                      // ── Card ───────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: AppColors.mediumShadow,
                         ),
-                        validator: Validators.email,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Hasło',
-                          prefixIcon: const Icon(Icons.lock_outlined),
-                          suffixIcon: IconButton(
-                            icon: Icon(_obscurePassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded),
-                            onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _LabeledField(
+                                label: 'Email',
+                                child: TextFormField(
+                                  controller: _emailController,
+                                  keyboardType:
+                                      TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const [
+                                    AutofillHints.username,
+                                    AutofillHints.email,
+                                  ],
+                                  decoration: const InputDecoration(
+                                    hintText: 'twoj@email.pl',
+                                    prefixIcon:
+                                        Icon(Icons.alternate_email_rounded),
+                                  ),
+                                  validator: Validators.email,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _LabeledField(
+                                label: 'Hasło',
+                                child: TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  textInputAction: TextInputAction.done,
+                                  autofillHints: const [
+                                    AutofillHints.password,
+                                  ],
+                                  onFieldSubmitted: (_) => _login(),
+                                  decoration: InputDecoration(
+                                    hintText: 'Twoje hasło',
+                                    prefixIcon:
+                                        const Icon(Icons.lock_outline_rounded),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(_obscurePassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded),
+                                      onPressed: () => setState(() =>
+                                          _obscurePassword =
+                                              !_obscurePassword),
+                                    ),
+                                  ),
+                                  validator: Validators.password,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _openForgotPassword,
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text('Zapomniałeś hasła?'),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 52,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _login,
+                                  style: ElevatedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Zaloguj się',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        validator: Validators.password,
                       ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Zaloguj się'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
+
+                      // ── Register prompt ────────────────────────────
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Expanded(
-                            child: Divider(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.2),
+                          Text(
+                            'Nie masz konta?',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12),
-                            child: Text(
-                              'lub',
+                          const SizedBox(width: 4),
+                          TextButton(
+                            onPressed: () => context.go('/register'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'Zarejestruj się',
                               style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
                               ),
                             ),
                           ),
-                          Expanded(
-                            child: Divider(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.2),
-                            ),
-                          ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _isLoading ? null : _loginWithGoogle,
-                          icon: const Icon(Icons.g_mobiledata_rounded,
-                              size: 28),
-                          label: const Text('Kontynuuj z Google'),
-                        ),
-                      ),
-                      if (!kIsWeb && Platform.isIOS) ...[
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : _loginWithApple,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                            ),
-                            icon: const Icon(Icons.apple, size: 22),
-                            label: const Text('Kontynuuj z Apple'),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () => context.go('/register'),
-                        child: const Text('Nie masz konta? Zarejestruj się'),
                       ),
                     ],
                   ),
@@ -305,6 +334,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Field label rendered above the input — gives the form a more
+/// settled, professional feel than relying purely on floating labels.
+class _LabeledField extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _LabeledField({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+}
+
+class _Blob extends StatelessWidget {
+  final Color color;
+  final double size;
+  const _Blob({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
         ),
       ),
     );

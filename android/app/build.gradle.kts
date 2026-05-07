@@ -29,10 +29,6 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // flutter_appauth: redirect scheme for the OAuth callback intent.
-        // Must be the lowercased reversed Google iOS Client ID prefix.
-        manifestPlaceholders["appAuthRedirectScheme"] =
-            "com.googleusercontent.apps.489859737052-eo8mjhc2apsbu5u2vo28smr65vlu0j8m"
     }
 
     buildTypes {
