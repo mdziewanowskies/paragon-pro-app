@@ -220,10 +220,6 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
     final members = widget.familyData['members'] as List? ?? [];
     final role = widget.familyData['role'] as String? ?? 'member';
     final isAdmin = role == 'admin';
-    final memberIds = members
-        .map((m) => m['user_id'] as String? ?? '')
-        .where((id) => id.isNotEmpty)
-        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,20 +279,9 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-
-        // Members list with achievements
-        Text('Członkowie', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ...members.map((m) => _MemberTile(
-              member: m,
-              ref: ref,
-              context: context,
-            )),
-
-        // Family achievements summary
-        const SizedBox(height: 20),
-        _FamilyAchievementsSummary(memberIds: memberIds, ref: ref),
+        // Members list, leaderboard, stats and danger zone are
+        // rendered by their dedicated widgets in FamilyScreen — this
+        // widget now only owns the hero + invite affordance.
 
         // Invite section
         if (isAdmin) ...[

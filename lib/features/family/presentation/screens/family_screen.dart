@@ -10,9 +10,15 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/locked_feature_view.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../../data/family_repository.dart';
+import '../widgets/family_danger_zone.dart';
+import '../widgets/family_expense_share_donut.dart';
+import '../widgets/family_leaderboard.dart';
 import '../widgets/family_lite_banner.dart';
 import '../widgets/family_management.dart';
-import '../widgets/family_stats.dart';
+import '../widgets/family_members_list.dart';
+import '../widgets/family_pending_invitations.dart';
+import '../widgets/family_recent_activity.dart';
+import '../widgets/family_stats_card.dart';
 import '../widgets/invitation_card.dart';
 
 final familyProvider =
@@ -209,14 +215,62 @@ class FamilyScreen extends ConsumerWidget {
                     onCreated: () => ref.invalidate(familyProvider),
                   );
                 }
+                final familyId = data['familyId'] as String;
+                final role = data['role'] as String? ?? 'member';
+                final isAdmin = role == 'admin';
+                final me = SupabaseService.auth.currentUser;
+                final myMember = (data['members'] as List? ?? const [])
+                    .cast<Map<String, dynamic>>()
+                    .firstWhere(
+                  (m) => m['user_id'] == me?.id,
+                  orElse: () => <String, dynamic>{},
+                );
+                final memberCount =
+                    (data['members'] as List?)?.length ?? 0;
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FamilyManagement(
                       familyData: data,
-                      onInviteSent: () => ref.invalidate(familyProvider),
+                      onInviteSent: () =>
+                          ref.invalidate(familyProvider),
                     ),
                     const SizedBox(height: 16),
-                    FamilyStats(familyId: data['familyId'] as String),
+                    FamilyLeaderboard(
+                      familyId: familyId,
+                      currentUserId: me?.id ?? '',
+                    ),
+                    const SizedBox(height: 12),
+                    FamilyStatsCard(
+                      familyId: familyId,
+                      memberCount: memberCount,
+                    ),
+                    const SizedBox(height: 12),
+                    FamilyExpenseShareDonut(
+                      familyId: familyId,
+                      memberCount: memberCount,
+                    ),
+                    const SizedBox(height: 12),
+                    FamilyRecentActivity(familyId: familyId),
+                    const SizedBox(height: 12),
+                    FamilyMembersList(
+                      familyId: familyId,
+                      currentUserIsAdmin: isAdmin,
+                      currentUserId: me?.id ?? '',
+                    ),
+                    if (isAdmin) ...[
+                      const SizedBox(height: 12),
+                      FamilyPendingInvitations(familyId: familyId),
+                    ],
+                    const SizedBox(height: 16),
+                    if (myMember.isNotEmpty)
+                      FamilyDangerZone(
+                        familyId: familyId,
+                        memberRowId: myMember['id'] as String,
+                        isAdmin: isAdmin,
+                        onLeft: () => ref.invalidate(familyProvider),
+                      ),
+                    const SizedBox(height: 16),
                   ],
                 );
               },
