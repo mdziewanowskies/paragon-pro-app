@@ -8,6 +8,7 @@ import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/receipt_image_cache.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../family/data/family_repository.dart';
 import '../../../../core/utils/merchant_normalizer.dart';
 import '../../../../core/services/storage_service.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -27,6 +28,32 @@ class ReceiptUpload extends ConsumerStatefulWidget {
 
 class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
   bool _isUploading = false;
+  bool _shareWithFamily = false;
+  String? _familyId;
+  bool _familyChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveFamilyMembership();
+  }
+
+  /// Look up which family the user belongs to so the 'Udostępnij
+  /// rodzinie' checkbox + the family_id we need to write are ready.
+  /// Skipped for users who can't share anyway (Free without family).
+  Future<void> _resolveFamilyMembership() async {
+    try {
+      final repo = FamilyRepository.instance;
+      final m = await repo.currentMembership();
+      if (!mounted) return;
+      setState(() {
+        _familyId = m?['family_id'] as String?;
+        _familyChecked = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _familyChecked = true);
+    }
+  }
 
   Future<void> _pickAndUpload(ImageSource source) async {
     // Check subscription limit (skip if premium via RC or Supabase).
@@ -105,6 +132,12 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
       Map<String, dynamic> receiptData = {
         'user_id': userId,
         'image_url': publicUrl,
+        // Family sharing — only attach when both the membership is
+        // known and the user actually opted in via the checkbox.
+        if (_shareWithFamily && _familyId != null) ...{
+          'family_id': _familyId,
+          'shared_with_family': true,
+        },
       };
 
       try {
@@ -276,7 +309,15 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
               ),
             ),
           )
-        else
+        else ...[
+          if (_familyChecked && _familyId != null)
+            _ShareWithFamilyToggle(
+              value: _shareWithFamily,
+              onChanged: (v) {
+                Haptics.selection();
+                setState(() => _shareWithFamily = v);
+              },
+            ),
           Row(
             children: [
               Expanded(
@@ -296,7 +337,76 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
               ),
             ],
           ),
+        ],
       ],
+    );
+  }
+}
+
+class _ShareWithFamilyToggle extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ShareWithFamilyToggle({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: value
+            ? theme.colorScheme.primary.withValues(alpha: 0.10)
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: value
+              ? theme.colorScheme.primary.withValues(alpha: 0.4)
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.family_restroom_rounded,
+            size: 18,
+            color: value
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Udostępnij rodzinie',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Paragon trafi do wspólnych statystyk i rankingu.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 }
