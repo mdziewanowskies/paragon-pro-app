@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'analytics_service.dart';
 import 'supabase_service.dart';
 
@@ -144,16 +145,38 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
   /// 3. effectiveTier = manual_tier_override ?? syncedTier
   /// 4. Writes the result back to user_subscriptions.tier
   ///
-  /// We never touch `tier` or `manual_tier_override` directly from
-  /// the client — only this function does.
+  /// Skipped when RevenueCat already has an active entitlement —
+  /// those are mobile purchases that Stripe doesn't know about, and
+  /// running the function would overwrite tier back to `free`.
   Future<void> _syncFromStripe() async {
+    try {
+      final info = await Purchases.getCustomerInfo();
+      if (info.entitlements.active.isNotEmpty) {
+        debugPrint(
+            'Skipping check-subscription — RevenueCat entitlement active');
+        return;
+      }
+    } catch (_) {
+      // RC not initialized / not iOS-Android — fall through to Stripe.
+    }
     try {
       await SupabaseService.invokeFunction('check-subscription');
     } catch (e) {
-      // Network blip / function not deployed — fine, we'll fall back
-      // to whatever the DB already has.
       debugPrint('check-subscription sync skipped: $e');
     }
+  }
+
+  /// Returns `premium` if RevenueCat has an active entitlement, else
+  /// null. Used as a safety net when the DB still says `free` because
+  /// the upsert race lost.
+  Future<String?> _revenueCatPremiumOverride() async {
+    try {
+      final info = await Purchases.getCustomerInfo();
+      if (info.entitlements.active.isNotEmpty) {
+        return SubscriptionInfo.tierPremium;
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<SubscriptionInfo> _fetchSubscription(String userId) async {
@@ -193,6 +216,24 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
       // If the RPC was unavailable, just use the user's own tier.
       if (effectiveTier == SubscriptionInfo.tierFree && ownTier != SubscriptionInfo.tierFree) {
         effectiveTier = ownTier;
+      }
+
+      // Mobile safety net: if backend still says free but RevenueCat
+      // has an active entitlement, override to premium and write back
+      // to the DB so the next read agrees.
+      if (effectiveTier == SubscriptionInfo.tierFree) {
+        final rcOverride = await _revenueCatPremiumOverride();
+        if (rcOverride != null) {
+          effectiveTier = rcOverride;
+          source = SubscriptionSource.own;
+          unawaited(SupabaseService.client
+              .from('user_subscriptions')
+              .upsert({
+            'user_id': userId,
+            'tier': rcOverride,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'user_id'));
+        }
       }
 
       // Get limits for the resolved tier.

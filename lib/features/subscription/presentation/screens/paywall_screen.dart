@@ -13,8 +13,8 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/subscription_service.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
-import '../../../../shared/widgets/celebration_overlay.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
+import '../../../../shared/widgets/premium_activated_dialog.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -97,11 +97,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         // the free trial. Defer the lookup to next frame so RevenueCat
         // has time to refresh customerInfo.
         unawaited(_scheduleTrialRemindersIfApplicable());
-        await CelebrationOverlay.show(
-          context,
-          title: 'Premium aktywowany!',
-          subtitle: 'Wszystkie funkcje są teraz odblokowane.',
-        );
+        await PremiumActivatedDialog.show(context);
         if (mounted) context.go('/');
       }
     } on PlatformException catch (e) {
