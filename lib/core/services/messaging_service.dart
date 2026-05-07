@@ -179,6 +179,20 @@ class MessagingService {
     int attempts = 5,
     Duration delay = const Duration(milliseconds: 600),
   }) async {
+    // iOS quirk: getToken() throws apns-token-not-set until APNs has
+    // registered the device. Wait on getAPNSToken() first — Firebase
+    // exposes that handshake explicitly.
+    if (!kIsWeb && Platform.isIOS) {
+      for (var i = 0; i < attempts; i++) {
+        try {
+          final apns = await _messaging.getAPNSToken();
+          if (apns != null && apns.isNotEmpty) break;
+        } catch (e) {
+          debugPrint('APNs token attempt ${i + 1}/$attempts failed: $e');
+        }
+        await Future<void>.delayed(delay);
+      }
+    }
     for (var i = 0; i < attempts; i++) {
       try {
         final t = await _messaging.getToken();
