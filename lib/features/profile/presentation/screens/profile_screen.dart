@@ -100,8 +100,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final profileState = ref.watch(profileProvider);
     final subscription = ref.watch(revenueCatStatusProvider);
     final supabaseSub = ref.watch(subscriptionProvider);
-    final hasPremiumInSupabase =
-        supabaseSub.valueOrNull?.isPremium ?? false;
+    final supabaseTier = supabaseSub.valueOrNull;
+    final hasPremiumInSupabase = supabaseTier?.isPremium ?? false;
+    final isFamilyLite = supabaseTier?.isFamilyLite ?? false;
+    final isInheritedFromFamily =
+        supabaseTier?.isInheritedFromFamily ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -136,9 +139,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       data: (sub) {
                         final isPremium =
                             sub.isPremium || hasPremiumInSupabase;
-                        final tierLabel = isPremium && sub.isFree
+                        // Tier display priority:
+                        // RC Premium → 'Premium', Supabase family_lite →
+                        // 'Family Lite', otherwise the RC label.
+                        final tierLabel = isPremium
                             ? 'Premium'
-                            : sub.tierLabel;
+                            : isFamilyLite
+                                ? 'Family Lite'
+                                : sub.tierLabel;
+                        final showAccentIcon = isPremium || isFamilyLite;
                         return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -147,9 +156,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               Icon(
                                 isPremium
                                     ? Icons.workspace_premium_rounded
-                                    : Icons.card_membership_rounded,
+                                    : isFamilyLite
+                                        ? Icons.family_restroom_rounded
+                                        : Icons.card_membership_rounded,
                                 size: 20,
-                                color: isPremium
+                                color: showAccentIcon
                                     ? Colors.amber
                                     : null,
                               ),
@@ -207,6 +218,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   fontSize: 13, color: Colors.green),
                             ),
                           ],
+                          if (isFamilyLite && !isPremium) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded,
+                                    size: 14, color: Colors.amber),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    isInheritedFromFamily
+                                        ? 'Family Lite z planu rodziny — masz 15 paragonów/mies, wspólne wydatki i gamifikację rodzinną.'
+                                        : 'Family Lite — 15 paragonów/mies, wspólne wydatki, gamifikacja rodzinna.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           if (!isPremium)
                             SizedBox(
@@ -214,8 +249,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               child: ElevatedButton(
                                 onPressed: () =>
                                     context.go('/pricing'),
-                                child:
-                                    const Text('Ulepsz do Pro'),
+                                child: Text(
+                                  isFamilyLite
+                                      ? 'Odblokuj pełne Premium'
+                                      : 'Ulepsz do Pro',
+                                ),
                               ),
                             )
                           else

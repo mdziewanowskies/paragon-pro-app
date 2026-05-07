@@ -1,8 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'analytics_service.dart';
 import 'supabase_service.dart';
 
+/// Where the user's effective tier comes from. `own` = they bought
+/// it themselves; `family` = they're a member of a Premium admin's
+/// family and were auto-upgraded to Family Lite.
+enum SubscriptionSource { own, family }
+
 class SubscriptionInfo {
+  static const tierFree = 'free';
+  static const tierFamilyLite = 'family_lite';
+  static const tierPremium = 'premium';
+
   final String tier;
+  final SubscriptionSource source;
   final int maxReceiptsPerMonth;
   final bool aiFeaturesEnabled;
   final bool familySharingEnabled;
@@ -12,6 +23,7 @@ class SubscriptionInfo {
 
   SubscriptionInfo({
     required this.tier,
+    this.source = SubscriptionSource.own,
     required this.maxReceiptsPerMonth,
     required this.aiFeaturesEnabled,
     required this.familySharingEnabled,
@@ -27,12 +39,33 @@ class SubscriptionInfo {
   double get usagePercentage => maxReceiptsPerMonth > 0
       ? currentMonthReceipts / maxReceiptsPerMonth
       : 0;
-  bool get isFree => tier == 'free';
-  bool get isPremium => tier == 'premium';
+
+  bool get isFree => tier == tierFree;
+  bool get isFamilyLite => tier == tierFamilyLite;
+  bool get isPremium => tier == tierPremium;
+
+  /// True when the user has any non-Free tier benefits — covers both
+  /// Family Lite (inherited) and Premium (own purchase).
+  bool get hasAnyTierPerks => !isFree;
+
+  /// Inherited from family admin's Premium subscription rather than
+  /// purchased by this user.
+  bool get isInheritedFromFamily => source == SubscriptionSource.family;
+
+  String get tierLabel {
+    switch (tier) {
+      case tierPremium:
+        return 'Premium';
+      case tierFamilyLite:
+        return 'Family Lite';
+      default:
+        return 'Darmowy';
+    }
+  }
 
   factory SubscriptionInfo.free({int currentReceipts = 0}) {
     return SubscriptionInfo(
-      tier: 'free',
+      tier: tierFree,
       maxReceiptsPerMonth: 5,
       aiFeaturesEnabled: false,
       familySharingEnabled: false,
@@ -57,30 +90,65 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionInfo> {
 
   Future<SubscriptionInfo> _fetchSubscription(String userId) async {
     try {
-      // Get user subscription
-      final sub = await SupabaseService.client
+      // Authoritative source: backend RPC computes the effective tier
+      // including Family Lite inheritance from a Premium admin's family.
+      // Falls back to user_subscriptions if the RPC is unavailable.
+      String effectiveTier = SubscriptionInfo.tierFree;
+      var source = SubscriptionSource.own;
+      try {
+        final result = await SupabaseService.rpc(
+          'get_effective_tier',
+          params: {'_user_id': userId},
+        );
+        if (result is String && result.isNotEmpty) {
+          effectiveTier = result;
+        }
+      } catch (_) {
+        // RPC not deployed yet — fall through to direct read.
+      }
+
+      // Direct read of the user's own row to detect inheritance.
+      final ownRow = await SupabaseService.client
           .from('user_subscriptions')
-          .select()
+          .select('tier')
           .eq('user_id', userId)
           .maybeSingle();
+      final ownTier = ownRow?['tier'] as String? ?? SubscriptionInfo.tierFree;
 
-      final tier = sub?['tier'] as String? ?? 'free';
+      // If the RPC said family_lite but the user's own tier is free,
+      // they're inheriting from a Premium admin.
+      if (effectiveTier == SubscriptionInfo.tierFamilyLite &&
+          ownTier == SubscriptionInfo.tierFree) {
+        source = SubscriptionSource.family;
+      }
 
-      // Get limits for tier
+      // If the RPC was unavailable, just use the user's own tier.
+      if (effectiveTier == SubscriptionInfo.tierFree && ownTier != SubscriptionInfo.tierFree) {
+        effectiveTier = ownTier;
+      }
+
+      // Get limits for the resolved tier.
       final limits = await SupabaseService.client
           .from('subscription_limits')
           .select()
-          .eq('tier', tier)
+          .eq('tier', effectiveTier)
           .maybeSingle();
 
-      // Get current month receipt count
+      // Get current month receipt count.
       final count = await SupabaseService.rpc(
         'count_user_receipts_this_month',
         params: {'_user_id': userId},
       );
 
+      // Tag the user for segmentation. Firing here means every refresh
+      // re-asserts the property — cheap, idempotent.
+      AnalyticsService.setUserProperty('subscription_tier', effectiveTier);
+      AnalyticsService.setUserProperty(
+          'subscription_source', source.name);
+
       return SubscriptionInfo(
-        tier: tier,
+        tier: effectiveTier,
+        source: source,
         maxReceiptsPerMonth:
             limits?['max_receipts_per_month'] as int? ?? 10,
         aiFeaturesEnabled:

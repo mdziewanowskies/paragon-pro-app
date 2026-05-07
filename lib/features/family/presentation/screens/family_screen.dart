@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/skeletons.dart';
+import '../widgets/family_lite_banner.dart';
 import '../widgets/family_management.dart';
 import '../widgets/family_stats.dart';
 import '../widgets/invitation_card.dart';
@@ -110,6 +111,8 @@ class FamilyScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Family Lite informational banner (no-op for other tiers).
+            const FamilyLiteBanner(),
             // Pending invitations
             invitations.when(
               loading: () => const SizedBox.shrink(),

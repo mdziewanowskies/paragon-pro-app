@@ -36,6 +36,18 @@ class SubscriptionGate extends ConsumerWidget {
 
         if (!blocked) return child;
 
+        // Family Lite users see a more specific message — they already
+        // have *some* paid perks (sharing, family stats) but this
+        // particular feature is Premium-only.
+        final isFamilyLite = sub.isFamilyLite;
+        final headline =
+            isFamilyLite ? 'Funkcja pełnego Premium' : 'Funkcja Premium';
+        final body = isFamilyLite
+            ? '$featureName nie jest dostępna w Family Lite. '
+                'Odblokuj ją w pełnym planie Premium.'
+            : '$featureName jest dostępna w planie Premium.';
+        final cta = isFamilyLite ? 'Przejdź na Premium' : 'Ulepsz plan';
+
         return Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -59,12 +71,13 @@ class SubscriptionGate extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Funkcja Premium',
+                headline,
                 style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                '$featureName jest dostępna w planie Premium.',
+                body,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context)
                           .colorScheme
@@ -77,7 +90,7 @@ class SubscriptionGate extends ConsumerWidget {
               ElevatedButton.icon(
                 onPressed: () => context.go('/pricing'),
                 icon: const Icon(Icons.workspace_premium_rounded),
-                label: const Text('Ulepsz plan'),
+                label: Text(cta),
               ),
             ],
           ),

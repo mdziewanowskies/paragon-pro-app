@@ -29,7 +29,9 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
   bool _isUploading = false;
 
   Future<void> _pickAndUpload(ImageSource source) async {
-    // Check subscription limit (skip if premium via RC or Supabase)
+    // Check subscription limit (skip if premium via RC or Supabase).
+    // canUpload already accounts for tier — Free=5, Family Lite=15,
+    // Premium=∞ — so we just surface a tier-specific message.
     final rcStatus = ref.read(revenueCatStatusProvider).value;
     final isPro = rcStatus?.isPremium ?? false;
     final sub = ref.read(subscriptionProvider).value;
@@ -37,7 +39,9 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
       if (mounted) {
         AppSnack.show(
           context,
-          'Osiągnięto limit paragonów w tym miesiącu. Ulepsz plan!',
+          sub.isFamilyLite
+              ? 'Limit Family Lite (${sub.maxReceiptsPerMonth}/mies) wykorzystany. Pełne Premium = brak limitu.'
+              : 'Osiągnięto limit paragonów w tym miesiącu. Ulepsz plan!',
           kind: SnackKind.warning,
         );
       }
