@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +7,9 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
+import '../../../../core/utils/auth_error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
-import '../../../../shared/widgets/app_snackbar.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -59,7 +58,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       Haptics.success();
       AnalyticsService.signupSuccess();
       if (mounted) {
-        context.go('/profile-setup');
+        // Email confirmation is required before login. Hand the user
+        // off to the verify screen rather than profile setup — it will
+        // auto-forward once Supabase signs them in via deep link.
+        final email = Uri.encodeQueryComponent(
+            _emailController.text.trim());
+        context.go('/verify-email?email=$email');
       }
     } catch (e, stackTrace) {
       debugPrint('=== REGISTER ERROR ===');
@@ -68,44 +72,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       debugPrint('Stack: $stackTrace');
       developer.log('Register failed',
           error: e, stackTrace: stackTrace, name: 'Auth');
-      if (mounted) {
-        AppSnack.show(
-          context,
-          'Błąd rejestracji: ${_getErrorMessage(e)}',
-          kind: SnackKind.error,
-          duration: const Duration(seconds: 6),
-        );
-      }
+      if (mounted) _showErrorDialog(AuthErrorMapper.message(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  String _getErrorMessage(dynamic error) {
-    final msg = error.toString();
-    final msgLower = msg.toLowerCase();
-    if (msgLower.contains('already registered') ||
-        msgLower.contains('already exists')) {
-      return 'Ten email jest już zarejestrowany';
-    }
-    if (msgLower.contains('weak password')) {
-      return 'Hasło jest za słabe';
-    }
-    if (msgLower.contains('email_address_invalid') ||
-        msgLower.contains('invalid email')) {
-      return 'Nieprawidłowy adres email';
-    }
-    if (msgLower.contains('signup_disabled')) {
-      return 'Rejestracja jest wyłączona w Supabase';
-    }
-    if (msgLower.contains('socketexception') ||
-        msgLower.contains('connection refused')) {
-      return 'Brak połączenia z serwerem. Sprawdź internet.';
-    }
-    if (kDebugMode) {
-      return msg.length > 200 ? msg.substring(0, 200) : msg;
-    }
-    return 'Spróbuj ponownie później';
+  void _showErrorDialog(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Expanded(child: Text('Nie udało się utworzyć konta')),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Rozumiem'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showInProgressDoc(String name) {

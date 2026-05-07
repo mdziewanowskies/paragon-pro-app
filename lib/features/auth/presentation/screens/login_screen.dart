@@ -1,13 +1,14 @@
 import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthApiException;
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/profile_service.dart';
+import '../../../../core/utils/auth_error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
@@ -99,32 +100,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     debugPrint('Stack: $stackTrace');
     developer.log('Login failed', error: e, stackTrace: stackTrace, name: 'Auth');
     if (!mounted) return;
-    AppSnack.show(
-      context,
-      'Błąd logowania: ${_getErrorMessage(e)}',
-      kind: SnackKind.error,
-      duration: const Duration(seconds: 6),
-    );
+    final isUnconfirmed =
+        e is AuthApiException && e.code == 'email_not_confirmed';
+    if (isUnconfirmed) {
+      // Send the user back to the verify screen instead of just toasting.
+      context.go(
+        '/verify-email?email=${Uri.encodeQueryComponent(_emailController.text.trim())}',
+      );
+      return;
+    }
+    _showErrorDialog(AuthErrorMapper.message(e));
   }
 
-  String _getErrorMessage(dynamic error) {
-    final msg = error.toString();
-    final msgLower = msg.toLowerCase();
-    if (msgLower.contains('invalid login credentials') ||
-        msgLower.contains('invalid_credentials')) {
-      return 'Nieprawidłowy email lub hasło';
-    }
-    if (msgLower.contains('email not confirmed')) {
-      return 'Potwierdź email przed logowaniem';
-    }
-    if (msgLower.contains('socketexception') ||
-        msgLower.contains('connection refused')) {
-      return 'Brak połączenia z serwerem. Sprawdź internet.';
-    }
-    if (kDebugMode) {
-      return msg.length > 200 ? msg.substring(0, 200) : msg;
-    }
-    return 'Spróbuj ponownie później';
+  void _showErrorDialog(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Expanded(child: Text('Nie udało się zalogować')),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Rozumiem'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

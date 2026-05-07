@@ -6,6 +6,7 @@ import '../../core/services/deep_link_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/profile/presentation/screens/profile_setup_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -34,11 +35,17 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final user = SupabaseService.auth.currentUser;
       final isAuth = user != null;
-      final isOnAuth = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
-          state.matchedLocation == '/onboarding';
+      final loc = state.matchedLocation;
+      final isOnAuth = loc == '/login' ||
+          loc == '/register' ||
+          loc == '/onboarding';
+      // /verify-email is a hybrid: you reach it without a session
+      // (post-signup) and it self-navigates once the session lands.
+      // Don't kick the unauth user off it, don't kick the auth user
+      // off it either — the screen handles its own forward.
+      final isVerify = loc == '/verify-email';
 
-      if (!isAuth && !isOnAuth) return '/onboarding';
+      if (!isAuth && !isOnAuth && !isVerify) return '/onboarding';
       if (isAuth && isOnAuth) return '/';
       return null;
     },
@@ -57,6 +64,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/register',
         pageBuilder: (context, state) =>
             smoothPage(child: const RegisterScreen()),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        pageBuilder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return smoothPage(child: VerifyEmailScreen(email: email));
+        },
       ),
       GoRoute(
         path: '/profile-setup',

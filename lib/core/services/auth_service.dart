@@ -14,6 +14,12 @@ final currentUserProvider = Provider<User?>((ref) {
 });
 
 class AuthService {
+  /// Where every Supabase email link should send the user back.
+  /// Registered as a CFBundleURLScheme in iOS Info.plist and as an
+  /// intent filter in the Android manifest.
+  static const _emailCallback =
+      'com.paragonpro.paragonpro://login-callback/';
+
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -21,6 +27,7 @@ class AuthService {
     return await SupabaseService.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: _emailCallback,
     );
   }
 
@@ -40,12 +47,21 @@ class AuthService {
   }
 
   /// Sends a password reset email through Supabase. The link inside
-  /// the email lands back on the app via the
-  /// com.paragonpro.paragonpro://login-callback/ deep link.
+  /// the email lands back on the app via [_emailCallback].
   Future<void> resetPassword(String email) async {
     await SupabaseService.auth.resetPasswordForEmail(
       email,
-      redirectTo: 'com.paragonpro.paragonpro://login-callback/',
+      redirectTo: _emailCallback,
+    );
+  }
+
+  /// Resend the signup confirmation email — used on the verify screen
+  /// when the user didn't get the original.
+  Future<void> resendSignupConfirmation(String email) async {
+    await SupabaseService.auth.resend(
+      type: OtpType.signup,
+      email: email,
+      emailRedirectTo: _emailCallback,
     );
   }
 
