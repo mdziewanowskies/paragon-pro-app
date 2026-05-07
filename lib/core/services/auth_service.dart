@@ -47,15 +47,16 @@ class AuthService {
     await SupabaseService.auth.signOut();
   }
 
-  /// Launches the Google OAuth flow via Supabase. On iOS this surfaces an
-  /// in-app SFAuthenticationSession sheet; on Android a Custom Tab. The
-  /// session lands back in the app via the [_emailCallback] deep link and
-  /// is picked up by the existing `onAuthStateChange` listener.
+  /// Launches the Google OAuth flow via Supabase. Uses the system browser
+  /// (`externalApplication`) — most reliable for mobile OAuth: the browser
+  /// follows the redirect chain to our custom URL scheme cleanly, iOS opens
+  /// the app via deep link, and Safari is left in the background. The
+  /// session lands back through the existing `onAuthStateChange` listener.
   Future<bool> signInWithGoogle() async {
     return await SupabaseService.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: _emailCallback,
-      authScreenLaunchMode: LaunchMode.inAppBrowserView,
+      authScreenLaunchMode: LaunchMode.externalApplication,
     );
   }
 

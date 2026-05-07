@@ -30,6 +30,10 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
       await ref.read(authServiceProvider).signInWithGoogle();
     } catch (e) {
       if (!mounted) return;
+      // If the deep-link callback already established a session, the
+      // signInWithOAuth Future may still throw on browser-dismissal
+      // bookkeeping. Silence that — the user is logged in.
+      if (ref.read(authServiceProvider).isLoggedIn) return;
       AppSnack.show(
         context,
         AuthErrorMapper.message(e),
