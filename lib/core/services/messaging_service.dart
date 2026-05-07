@@ -228,32 +228,54 @@ class MessagingService {
     debugPrint(
         'Uploading FCM token: $tokenPreview (platform=$platform, user=${user.id})');
 
+    final ok = await _doUpsert(token, user.id, platform);
+    if (ok) return true;
+
+    // Read-back failed. Most likely cause: a row keyed on this token
+    // is owned by a previous user (account switch on the same device
+    // install), so RLS blocks both the UPDATE on conflict and the
+    // SELECT on read-back. Recovery: invalidate the FCM token so the
+    // SDK gives us a fresh one that won't collide with the orphan row.
+    debugPrint('FCM upsert blocked (likely orphan row from previous '
+        'user) — rotating token');
     try {
-      // Upsert keyed on token: each FCM token must be unique across
-      // installs (a token identifies a single device install). If the
-      // user re-installs, FCM gives a new token, so old rows just sit
-      // until the backend prunes them.
+      await _messaging.deleteToken();
+      // iOS needs APNs; on a working device it's already there.
+      final fresh = await _fetchTokenWithRetry();
+      if (fresh == null || fresh == token) return false;
+      _lastToken = fresh;
+      return await _doUpsert(fresh, user.id, platform);
+    } catch (e) {
+      debugPrint('FCM token rotation failed: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> _doUpsert(
+      String token, String userId, String platform) async {
+    final tokenPreview = token.length > 16
+        ? '${token.substring(0, 16)}...'
+        : token;
+    debugPrint(
+        'Uploading FCM token: $tokenPreview (platform=$platform, user=$userId)');
+    try {
       await SupabaseService.client.from('device_push_tokens').upsert(
         {
-          'user_id': user.id,
+          'user_id': userId,
           'token': token,
           'platform': platform,
           'last_used_at': DateTime.now().toIso8601String(),
         },
         onConflict: 'token',
       );
-      // Read-back verification — confirms the row landed and matches.
       final verify = await SupabaseService.client
           .from('device_push_tokens')
           .select('id, user_id, platform')
           .eq('token', token)
+          .eq('user_id', userId)
           .maybeSingle();
-      if (verify == null) {
-        debugPrint('FCM token upsert returned no row on read-back '
-            '(RLS may be blocking SELECT)');
-        return false;
-      }
-      debugPrint('FCM token verified row=${verify['id']} for user=${verify['user_id']}');
+      if (verify == null) return false;
+      debugPrint('FCM token verified row=${verify['id']} for user=$userId');
       return true;
     } catch (e) {
       debugPrint('FCM token upload failed: $e');
