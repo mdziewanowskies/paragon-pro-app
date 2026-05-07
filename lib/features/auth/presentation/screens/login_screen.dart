@@ -93,7 +93,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _navigatePostLogin() async {
-    await ref.read(profileProvider.notifier).refresh();
+    // Once the Supabase session lands, the router's refreshListenable
+    // can pop /login synchronously — by the time refresh() resolves
+    // this widget may already be disposed. Bail early on every access
+    // to ref/context so we don't throw StateError from ref.read.
+    if (!mounted) return;
+    try {
+      await ref.read(profileProvider.notifier).refresh();
+    } catch (_) {
+      return; // disposed mid-await
+    }
+    if (!mounted) return;
     final profile = ref.read(profileProvider).value;
     if (!mounted) return;
     if (profile == null || !profile.profileCompleted) {
