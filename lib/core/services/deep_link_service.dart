@@ -27,7 +27,7 @@ class DeepLinkService {
 
     // Handle the URI that launched the app, if any.
     try {
-      final initial = await _appLinks.getInitialAppLink();
+      final initial = await _appLinks.getInitialLink();
       if (initial != null) _handle(initial);
     } catch (e) {
       debugPrint('DeepLinkService initial uri failed: $e');
