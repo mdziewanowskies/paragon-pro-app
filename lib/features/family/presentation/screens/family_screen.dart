@@ -36,10 +36,12 @@ final familyProvider =
 
   final familyId = membership['family_id'] as String;
 
-  // Get members (without join to profiles — no FK relationship)
+  // Get members (without join to profiles — no FK relationship).
+  // Include `id` so the danger zone widget can reference the row
+  // when leaving the family.
   final members = await SupabaseService.client
       .from('family_members')
-      .select('user_id, role, joined_at')
+      .select('id, user_id, role, joined_at')
       .eq('family_id', familyId);
 
   debugPrint('=== Family members for $familyId ===');
@@ -263,7 +265,7 @@ class FamilyScreen extends ConsumerWidget {
                       FamilyPendingInvitations(familyId: familyId),
                     ],
                     const SizedBox(height: 16),
-                    if (myMember.isNotEmpty)
+                    if (myMember.isNotEmpty && myMember['id'] != null)
                       FamilyDangerZone(
                         familyId: familyId,
                         memberRowId: myMember['id'] as String,
