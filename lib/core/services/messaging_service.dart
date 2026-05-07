@@ -95,6 +95,95 @@ class MessagingService {
     return await _uploadToken(t);
   }
 
+  /// Snapshot of the current push state — used by the diagnostic
+  /// screen so the user (or us) can see exactly what's broken.
+  static Future<PushDiagnostics> diagnostics() async {
+    NotificationSettings? settings;
+    try {
+      settings = await _messaging.getNotificationSettings();
+    } catch (_) {}
+
+    String? apns;
+    if (!kIsWeb && Platform.isIOS) {
+      try {
+        apns = await _messaging.getAPNSToken();
+      } catch (_) {}
+    }
+
+    final fcm = _lastToken ?? await _fetchTokenWithRetry(attempts: 2);
+    final user = SupabaseService.auth.currentUser;
+
+    Map<String, dynamic>? backendRow;
+    if (user != null && fcm != null) {
+      try {
+        backendRow = await SupabaseService.client
+            .from('device_push_tokens')
+            .select('id, platform, last_used_at')
+            .eq('user_id', user.id)
+            .eq('token', fcm)
+            .maybeSingle();
+      } catch (_) {}
+    }
+
+    return PushDiagnostics(
+      platform: kIsWeb
+          ? 'web'
+          : (Platform.isIOS ? 'ios' : Platform.isAndroid ? 'android' : 'other'),
+      authStatus: settings?.authorizationStatus.name ?? 'unknown',
+      apnsToken: apns,
+      fcmToken: fcm,
+      backendRowFound: backendRow != null,
+      backendRowId: backendRow?['id'] as String?,
+      userId: user?.id,
+    );
+  }
+
+  /// Sends a test push to *this* user via the same Edge Function the
+  /// backend uses for invitations. If push doesn't arrive after this
+  /// returns true, the failure is server-side.
+  static Future<void> sendTestPushToSelf() async {
+    final user = SupabaseService.auth.currentUser;
+    if (user == null) {
+      throw StateError('Not signed in');
+    }
+    await SupabaseService.invokeFunction(
+      'send-native-push',
+      body: {
+        'user_ids': [user.id],
+        'payload': {
+          'title': 'Test push',
+          'body': 'Jeśli to widzisz, FCM działa end-to-end.',
+          'tag': 'test-push',
+        },
+      },
+    );
+  }
+}
+
+class PushDiagnostics {
+  final String platform;
+  final String authStatus;
+  final String? apnsToken;
+  final String? fcmToken;
+  final bool backendRowFound;
+  final String? backendRowId;
+  final String? userId;
+
+  const PushDiagnostics({
+    required this.platform,
+    required this.authStatus,
+    this.apnsToken,
+    this.fcmToken,
+    this.backendRowFound = false,
+    this.backendRowId,
+    this.userId,
+  });
+
+  bool get permissionGranted =>
+      authStatus == 'authorized' || authStatus == 'provisional';
+  bool get hasFcmToken => fcmToken != null && fcmToken!.isNotEmpty;
+  bool get hasApnsToken => apnsToken != null && apnsToken!.isNotEmpty;
+
   static Future<String?> getToken() async {
     try {
       return await _messaging.getToken();

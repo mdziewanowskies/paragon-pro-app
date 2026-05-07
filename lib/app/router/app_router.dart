@@ -13,6 +13,7 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/subscription/presentation/screens/paywall_screen.dart';
 import '../../features/receipts/presentation/screens/receipt_grid_screen.dart';
+import '../../features/settings/presentation/screens/push_diagnostics_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../shared/widgets/smooth_page_transition.dart';
 
@@ -91,6 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         pageBuilder: (context, state) =>
             smoothPage(child: const SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/settings/push-diagnostics',
+        pageBuilder: (context, state) =>
+            smoothPage(child: const PushDiagnosticsScreen()),
       ),
       GoRoute(
         path: '/pricing',

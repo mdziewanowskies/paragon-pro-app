@@ -94,6 +94,21 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
+          // Push diagnostics — quick way to verify FCM end-to-end
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.bug_report_rounded),
+              title: const Text('Diagnostyka push'),
+              subtitle: const Text(
+                'Sprawdź rejestrację urządzenia, APNs token, pełen łańcuch FCM',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.go('/settings/push-diagnostics'),
+            ),
+          ),
+          const SizedBox(height: 8),
+
           // App version
           Card(
             child: ListTile(
