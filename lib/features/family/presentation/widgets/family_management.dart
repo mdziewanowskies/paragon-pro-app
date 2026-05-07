@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/utils/validators.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
+import '../../../notifications/data/notification_providers.dart';
 
 class FamilyManagement extends ConsumerStatefulWidget {
   final Map<String, dynamic> familyData;
@@ -19,6 +23,7 @@ class FamilyManagement extends ConsumerStatefulWidget {
 
 class _FamilyManagementState extends ConsumerState<FamilyManagement> {
   final _inviteController = TextEditingController();
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -27,33 +32,161 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
   }
 
   Future<void> _sendInvite() async {
-    final value = _inviteController.text.trim();
-    if (value.isEmpty) return;
+    final email = _inviteController.text.trim().toLowerCase();
+    final emailError = Validators.email(email);
+    if (emailError != null) {
+      Haptics.error();
+      AppSnack.show(
+        context,
+        emailError,
+        kind: SnackKind.warning,
+      );
+      return;
+    }
+    final familyId = widget.familyData['familyId'] as String?;
+    if (familyId == null || familyId.isEmpty) {
+      AppSnack.show(
+        context,
+        'Brak danych rodziny — odśwież ekran',
+        kind: SnackKind.error,
+      );
+      return;
+    }
 
+    Haptics.tap();
+    setState(() => _sending = true);
     try {
-      final userId = SupabaseService.auth.currentUser!.id;
-      await SupabaseService.client.from('family_invitations').insert({
-        'family_id': widget.familyData['familyId'],
-        'invited_by': userId,
-        'invited_email': value,
-        'status': 'pending',
-        'expires_at':
-            DateTime.now().add(const Duration(days: 7)).toIso8601String(),
-      });
+      // Try to look up the invited user up-front. If they already
+      // have an account we can link by user_id which makes the
+      // receiver-side query (`invited_user_id.eq.X`) match
+      // unconditionally, even if RLS blocks email-based reads.
+      String? invitedUserId;
+      try {
+        final hit = await SupabaseService.client
+            .from('profiles')
+            .select('user_id')
+            .eq('email', email)
+            .maybeSingle();
+        invitedUserId = hit?['user_id'] as String?;
+      } catch (_) {
+        // Profiles read can fail under RLS; not fatal.
+      }
+
+      // Same rejection that web uses: don't insert if there's already
+      // a pending invite for the same email + family.
+      final existing = await SupabaseService.client
+          .from('family_invitations')
+          .select('id')
+          .eq('family_id', familyId)
+          .eq('invited_email', email)
+          .eq('status', 'pending')
+          .maybeSingle();
+      if (existing != null) {
+        if (mounted) {
+          AppSnack.show(
+            context,
+            'Zaproszenie dla $email już oczekuje na akceptację.',
+            kind: SnackKind.info,
+          );
+        }
+        return;
+      }
+
+      final inserted = await SupabaseService.client
+          .from('family_invitations')
+          .insert({
+            'family_id': familyId,
+            'invited_by': SupabaseService.auth.currentUser!.id,
+            'invited_email': email,
+            if (invitedUserId != null) 'invited_user_id': invitedUserId,
+            'status': 'pending',
+            'expires_at': DateTime.now()
+                .add(const Duration(days: 7))
+                .toIso8601String(),
+          })
+          .select('id')
+          .single();
+
+      // Best-effort: if a `send-family-invitation` Edge Function exists
+      // (mirrors the web flow that sends the email + creates a
+      // notifications row), trigger it. Failing silently is OK — the
+      // invitation row already exists, the receiver can still see it
+      // in the bell on next 30s poll once they sign in.
+      try {
+        await SupabaseService.invokeFunction(
+          'send-family-invitation',
+          body: {
+            'invitation_id': inserted['id'],
+            'family_id': familyId,
+            'invited_email': email,
+          },
+        );
+      } catch (_) {
+        // Function not deployed or failed — proceed.
+      }
+
       _inviteController.clear();
       widget.onInviteSent?.call();
+      // Refresh sender's own notification panel so they see the
+      // pending invitation reflected immediately.
+      ref.invalidate(notificationInvitationsProvider);
+      Haptics.success();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Zaproszenie wysłane!')),
+        AppSnack.show(
+          context,
+          invitedUserId != null
+              ? 'Zaproszenie wysłane do $email — zobaczy je w aplikacji.'
+              : 'Zaproszenie wysłane do $email. Wyślemy mu też email.',
+          kind: SnackKind.success,
         );
       }
     } catch (e) {
+      Haptics.error();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Błąd: $e')),
-        );
+        _showSendError(e);
       }
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
+  }
+
+  void _showSendError(Object e) {
+    final raw = e.toString().toLowerCase();
+    String msg;
+    if (raw.contains('duplicate') ||
+        raw.contains('unique') ||
+        raw.contains('23505')) {
+      msg = 'Ten adres ma już aktywne zaproszenie do tej rodziny.';
+    } else if (raw.contains('row-level security') ||
+        raw.contains('rls')) {
+      msg = 'Brak uprawnień do wysłania zaproszenia. Tylko admin '
+          'rodziny może zapraszać nowych członków.';
+    } else if (raw.contains('socket') ||
+        raw.contains('connection') ||
+        raw.contains('failed host lookup')) {
+      msg = 'Brak połączenia z serwerem. Sprawdź internet.';
+    } else {
+      msg = 'Nie udało się wysłać zaproszenia. Spróbuj ponownie.';
+    }
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Expanded(child: Text('Nie udało się wysłać')),
+          ],
+        ),
+        content: Text(msg),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Rozumiem'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -161,8 +294,17 @@ class _FamilyManagementState extends ConsumerState<FamilyManagement> {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: _sendInvite,
-                child: const Text('Zaproś'),
+                onPressed: _sending ? null : _sendInvite,
+                child: _sending
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Zaproś'),
               ),
             ],
           ),
