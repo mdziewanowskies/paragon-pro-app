@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Required on Android 13+ before showing any FCM / local notifications. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:label="ParagonPro"
@@ -45,6 +47,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="paragonpro" />
+            </intent-filter>
+            <!-- Supabase auth callback (email confirmation, password reset,
+                 Google OAuth). Must match the redirectTo used in
+                 AuthService and the iOS Info.plist URL scheme. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.paragonpro.paragonpro"
+                      android:host="login-callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
