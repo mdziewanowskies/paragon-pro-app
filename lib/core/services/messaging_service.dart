@@ -121,18 +121,21 @@ class MessagingService {
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
       // Warm tap: app was backgrounded, user tapped notification.
       FirebaseMessaging.onMessageOpenedApp.listen(_routeFromMessage);
-      // Cold tap: app was killed. If the user launched via a push tap
-      // we get the message here. If the router isn't attached yet
-      // (likely on cold start), stash the message and replay once
-      // `attachRouter` lands.
-      final initial = await _messaging.getInitialMessage();
-      if (initial != null) {
+      // Cold tap: app was killed. Fire-and-forget — on iOS simulator
+      // (no APNs) `getInitialMessage` can hang indefinitely; awaiting
+      // here would block `runApp` and leave a white screen. The
+      // pending-message stash + attachRouter replay still covers the
+      // real-device cold tap once the call resolves.
+      unawaited(_messaging.getInitialMessage().then((initial) {
+        if (initial == null) return;
         if (_router != null) {
           _routeFromMessage(initial);
         } else {
           _pendingInitialMessage = initial;
         }
-      }
+      }).catchError((Object e) {
+        debugPrint('FCM getInitialMessage failed: $e');
+      }));
 
       // iOS quirk: getToken() can return null on the very first call
       // because the APNs token isn't ready yet. Retry up to 5 times
