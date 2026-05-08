@@ -26,10 +26,15 @@ final familyProvider =
   final userId = SupabaseService.auth.currentUser?.id;
   if (userId == null) return null;
 
+  // A user can be a member of multiple families (legacy invites,
+  // re-joining after leaving). Pick the most recent membership —
+  // matches FamilyRepository.currentMembership() behavior.
   final membership = await SupabaseService.client
       .from('family_members')
-      .select('family_id, role, families(id, name, created_by)')
+      .select('family_id, role, joined_at, families(id, name, created_by)')
       .eq('user_id', userId)
+      .order('joined_at', ascending: false)
+      .limit(1)
       .maybeSingle();
 
   if (membership == null) return null;
