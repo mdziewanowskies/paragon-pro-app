@@ -104,14 +104,17 @@ final gamificationDataProvider =
 });
 
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key});
+  /// Optional bottom-nav index to land on. Used by push-notification
+  /// deep linking — e.g. a warranty-expiring push routes to /?tab=3.
+  final int? initialTab;
+  const DashboardScreen({super.key, this.initialTab});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  int _currentTab = 0;
+  late int _currentTab = (widget.initialTab ?? 0).clamp(0, 4);
 
   // "Więcej" sub-screens. KSeF and Family are always visible — when
   // the user lacks the tier, the destination screen renders a locked

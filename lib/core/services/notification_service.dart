@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart';
+import 'messaging_service.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -25,11 +28,31 @@ class NotificationService {
         iOS: iosSettings,
       );
 
-      final result = await _plugin.initialize(settings);
+      final result = await _plugin.initialize(
+        settings,
+        onDidReceiveNotificationResponse: _onTap,
+      );
       _initialized = true;
       debugPrint('NotificationService initialized: $result');
     } catch (e) {
       debugPrint('NotificationService init FAILED: $e');
+    }
+  }
+
+  /// Local-notification tap handler. The payload is the JSON-encoded
+  /// `RemoteMessage.data` map (set in MessagingService) for FCM-driven
+  /// foreground banners; locally-scheduled reminders pass their own
+  /// `{type: ...}` payload so they hit the same routing table.
+  static void _onTap(NotificationResponse response) {
+    final raw = response.payload;
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        MessagingService.routeFromData(decoded);
+      }
+    } catch (e) {
+      debugPrint('local-notification payload decode failed: $e');
     }
   }
 
@@ -112,6 +135,10 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: null,
+        payload: jsonEncode({
+          'type': 'warranty_expiring',
+          'warranty_id': warrantyId,
+        }),
       );
       debugPrint(
           'Scheduled warranty reminder #$id for $merchantName on $notifyDate');
@@ -199,6 +226,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: jsonEncode(const {'type': 'subscription_expiring'}),
       );
       debugPrint('Scheduled trial reminder #$id for $fireAt');
     } catch (e) {
@@ -241,6 +269,7 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        payload: jsonEncode(const {'type': 'monthly_report'}),
       );
       debugPrint('Scheduled monthly summary at $fire');
     } catch (e) {

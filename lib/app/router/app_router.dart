@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/deep_link_service.dart';
+import '../../core/services/messaging_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
@@ -79,8 +80,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/',
-        pageBuilder: (context, state) =>
-            smoothPage(child: const DashboardScreen()),
+        pageBuilder: (context, state) {
+          // Push notifications and in-app deep links can land here with
+          // ?tab=N to focus a specific bottom-nav destination. Keying
+          // the page on the tab forces a rebuild when the query
+          // changes, so /?tab=3 from any screen lands on warranties.
+          final tab = int.tryParse(
+              state.uri.queryParameters['tab'] ?? '');
+          return smoothPage(
+            key: tab != null ? ValueKey('home-tab-$tab') : null,
+            child: DashboardScreen(initialTab: tab),
+          );
+        },
       ),
       GoRoute(
         path: '/profile',
@@ -103,12 +114,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             smoothPage(child: const ReceiptGridScreen()),
       ),
     ],
-  )..let(DeepLinkService.attach);
+  )
+    ..let(DeepLinkService.attach)
+    ..let((r) async => MessagingService.attachRouter(r));
 });
 
 extension on GoRouter {
   /// Tiny `let` so we can pipe the just-built router into
-  /// DeepLinkService.attach without juggling a temp variable.
+  /// service attach hooks without juggling a temp variable.
   GoRouter let(Future<void> Function(GoRouter) fn) {
     fn(this);
     return this;

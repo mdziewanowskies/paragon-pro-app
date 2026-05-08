@@ -4,7 +4,13 @@ enum NotificationKind {
   warrantyExpiring,
   achievementUnlocked,
   familyReceipt,
+  familyInvitation,
+  removedFromFamily,
+  monthlyReport,
   ksefSynced,
+  ksefDigest,
+  subscriptionExpiring,
+  subscriptionRenewed,
   system;
 
   static NotificationKind fromRaw(String? raw) {
@@ -15,8 +21,22 @@ enum NotificationKind {
         return NotificationKind.achievementUnlocked;
       case 'family_receipt':
         return NotificationKind.familyReceipt;
+      case 'family_invitation':
+        return NotificationKind.familyInvitation;
+      case 'removed_from_family':
+      case 'family_removed':
+        return NotificationKind.removedFromFamily;
+      case 'monthly_report':
+      case 'monthly_report_ready':
+        return NotificationKind.monthlyReport;
       case 'ksef_synced':
         return NotificationKind.ksefSynced;
+      case 'ksef_digest':
+        return NotificationKind.ksefDigest;
+      case 'subscription_expiring':
+        return NotificationKind.subscriptionExpiring;
+      case 'subscription_renewed':
+        return NotificationKind.subscriptionRenewed;
       default:
         return NotificationKind.system;
     }

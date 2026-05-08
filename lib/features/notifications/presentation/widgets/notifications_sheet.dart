@@ -413,8 +413,20 @@ class _Icon extends StatelessWidget {
         return '🏆';
       case NotificationKind.familyReceipt:
         return '👨‍👩‍👧‍👦';
+      case NotificationKind.familyInvitation:
+        return '✉️';
+      case NotificationKind.removedFromFamily:
+        return '👋';
+      case NotificationKind.monthlyReport:
+        return '📊';
       case NotificationKind.ksefSynced:
         return '📄';
+      case NotificationKind.ksefDigest:
+        return '📨';
+      case NotificationKind.subscriptionExpiring:
+        return '⏰';
+      case NotificationKind.subscriptionRenewed:
+        return '✅';
       case NotificationKind.system:
         return 'ℹ️';
     }

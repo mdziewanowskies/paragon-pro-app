@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 
@@ -23,6 +25,78 @@ class MessagingService {
   /// Cached most-recent token so we can re-upload on demand without
   /// re-fetching from the platform plugin.
   static String? _lastToken;
+
+  /// Router handle injected after GoRouter is built so push taps can
+  /// navigate the app. Wired from `app_router.dart` next to the
+  /// `DeepLinkService.attach` call.
+  static GoRouter? _router;
+
+  /// Cold-start RemoteMessage captured before the router was attached.
+  /// Replayed on first attachRouter() call so a tap from a killed
+  /// state still navigates correctly.
+  static RemoteMessage? _pendingInitialMessage;
+
+  /// Wires the GoRouter so push taps can navigate. Idempotent — safe
+  /// to call repeatedly during hot reload.
+  static void attachRouter(GoRouter router) {
+    _router = router;
+    final pending = _pendingInitialMessage;
+    if (pending != null) {
+      _pendingInitialMessage = null;
+      // Defer one frame so the router is ready to receive .go().
+      Future.microtask(() => _routeFromMessage(pending));
+    }
+  }
+
+  /// Public entry point used by the local-notification tap handler in
+  /// NotificationService — accepts the raw `data` map decoded from the
+  /// notification payload and walks it through the same routing table.
+  static void routeFromData(Map<String, dynamic> data) {
+    final route = _resolveRoute(data);
+    if (route != null) _router?.go(route);
+  }
+
+  static void _routeFromMessage(RemoteMessage m) {
+    final route = _resolveRoute(m.data);
+    if (route == null) {
+      debugPrint('FCM message tapped but no route for data=${m.data}');
+      return;
+    }
+    debugPrint('FCM tap → $route');
+    _router?.go(route);
+  }
+
+  /// Maps a backend notification payload to an in-app route. The
+  /// `type` key matches `NotificationKind.fromRaw` conventions; extra
+  /// dispatch fields (`warranty_id`, `family_id`) are passed through
+  /// as query params for screens that want to focus a specific row.
+  static String? _resolveRoute(Map<String, dynamic> data) {
+    final type = data['type']?.toString();
+    if (type == null) return null;
+    switch (type) {
+      case 'family_invitation':
+      case 'family_receipt':
+      case 'removed_from_family':
+      case 'family_removed':
+        // Family lives under the "Więcej" tab on the dashboard.
+        return '/?tab=4';
+      case 'warranty_expiring':
+        return '/?tab=3';
+      case 'ksef_synced':
+      case 'ksef_digest':
+        return '/?tab=2';
+      case 'monthly_report':
+      case 'monthly_report_ready':
+        return '/';
+      case 'achievement_unlocked':
+        return '/';
+      case 'subscription_expiring':
+      case 'subscription_renewed':
+        return '/pricing';
+      default:
+        return null;
+    }
+  }
 
   static Future<void> initialize() async {
     if (_initialized) return;
@@ -45,9 +119,20 @@ class MessagingService {
       );
 
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        debugPrint('FCM message opened: ${message.data}');
-      });
+      // Warm tap: app was backgrounded, user tapped notification.
+      FirebaseMessaging.onMessageOpenedApp.listen(_routeFromMessage);
+      // Cold tap: app was killed. If the user launched via a push tap
+      // we get the message here. If the router isn't attached yet
+      // (likely on cold start), stash the message and replay once
+      // `attachRouter` lands.
+      final initial = await _messaging.getInitialMessage();
+      if (initial != null) {
+        if (_router != null) {
+          _routeFromMessage(initial);
+        } else {
+          _pendingInitialMessage = initial;
+        }
+      }
 
       // iOS quirk: getToken() can return null on the very first call
       // because the APNs token isn't ready yet. Retry up to 5 times
@@ -243,7 +328,9 @@ class MessagingService {
             presentSound: true,
           ),
         ),
-        payload: m.data.toString(),
+        // JSON-encoded so NotificationService can decode it back to a
+        // routable Map<String, dynamic> on tap.
+        payload: jsonEncode(m.data),
       );
     } catch (e) {
       debugPrint('local-notification render failed: $e');
