@@ -189,14 +189,18 @@ class StoresScreen extends ConsumerWidget {
                                   ),
                                   if (lastPurchase != null) ...[
                                     const SizedBox(width: 8),
-                                    Text(
-                                      'Ostatni: ${Formatters.formatDate(DateTime.tryParse(lastPurchase))}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.4),
+                                    Flexible(
+                                      child: Text(
+                                        'Ostatni: ${Formatters.formatDate(DateTime.tryParse(lastPurchase))}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.4),
+                                        ),
                                       ),
                                     ),
                                   ],
