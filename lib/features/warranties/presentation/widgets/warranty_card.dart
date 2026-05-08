@@ -6,13 +6,11 @@ import '../screens/warranty_list_screen.dart';
 class WarrantyCard extends StatelessWidget {
   final WarrantyModel warranty;
   final VoidCallback? onDelete;
-  final VoidCallback? onTestEmail;
 
   const WarrantyCard({
     super.key,
     required this.warranty,
     this.onDelete,
-    this.onTestEmail,
   });
 
   @override
@@ -124,13 +122,6 @@ class WarrantyCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (onTestEmail != null)
-                  TextButton.icon(
-                    onPressed: onTestEmail,
-                    icon: const Icon(Icons.email_outlined, size: 16),
-                    label: const Text('Test email',
-                        style: TextStyle(fontSize: 12)),
-                  ),
                 if (onDelete != null)
                   IconButton(
                     onPressed: onDelete,

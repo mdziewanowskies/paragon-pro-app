@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/auth_service.dart';
-import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/supabase_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -94,112 +93,12 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // Push diagnostics — quick way to verify FCM end-to-end
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.bug_report_rounded),
-              title: const Text('Diagnostyka push'),
-              subtitle: const Text(
-                'Sprawdź rejestrację urządzenia, APNs token, pełen łańcuch FCM',
-                style: TextStyle(fontSize: 12),
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => context.go('/settings/push-diagnostics'),
-            ),
-          ),
-          const SizedBox(height: 8),
-
           // App version
           Card(
             child: ListTile(
               leading: const Icon(Icons.info_outline_rounded),
               title: const Text('Wersja aplikacji'),
               subtitle: const Text('1.0.0'),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Test notifications
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.notifications_active_rounded),
-                  title: const Text('Test powiadomień'),
-                  subtitle: const Text(
-                      'Sprawdź czy notyfikacje działają',
-                      style: TextStyle(fontSize: 12)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final granted =
-                                await NotificationService.requestPermission();
-                            debugPrint('Notification permission: $granted');
-                            if (!granted && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Brak uprawnień — włącz powiadomienia w Ustawieniach iPhone → ParagonPro → Powiadomienia'),
-                                  duration: Duration(seconds: 5),
-                                ),
-                              );
-                              return;
-                            }
-                            await NotificationService.showInstant(
-                              title: 'Test ParagonPro',
-                              body:
-                                  'Powiadomienia działają! Jeśli nie widzisz tego na lockscreenie — sprawdź Ustawienia → ParagonPro → Powiadomienia.',
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Wysłano! Na symulatorze iOS powiadomienia mogą nie wyświetlać się na lockscreenie — sprawdź w centrum powiadomień (swipe down).'),
-                                  duration: Duration(seconds: 5),
-                                ),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.send_rounded, size: 16),
-                          label: const Text('Instant',
-                              style: TextStyle(fontSize: 12)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            await NotificationService.requestPermission();
-                            await NotificationService
-                                .scheduleWarrantyReminder(
-                              warrantyId: 'test_${DateTime.now().millisecondsSinceEpoch}',
-                              merchantName: 'Test Sklep',
-                              expiryDate: DateTime.now()
-                                  .add(const Duration(minutes: 1, days: 30)),
-                              daysBefore: 30,
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Zaplanowano testowe powiadomienie za ~1 min')),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.schedule_rounded, size: 16),
-                          label: const Text('Za 1 min',
-                              style: TextStyle(fontSize: 12)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
           const SizedBox(height: 16),

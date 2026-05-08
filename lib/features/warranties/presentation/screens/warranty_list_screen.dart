@@ -183,27 +183,6 @@ class WarrantyListScreen extends ConsumerWidget {
                     ref.invalidate(warrantyListProvider);
                   }
                 },
-                onTestEmail: () async {
-                  try {
-                    await SupabaseService.invokeFunction(
-                      'send-warranty-notification',
-                      body: {'warrantyId': warranty.id},
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Testowy email wysłany pomyślnie!')),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Błąd wysyłania: $e')),
-                      );
-                    }
-                  }
-                },
               ),
               );
             },
