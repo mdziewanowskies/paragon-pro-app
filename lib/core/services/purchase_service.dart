@@ -11,7 +11,7 @@ import 'supabase_service.dart';
 // platform. Both come from the RevenueCat dashboard → Project →
 // API keys. iOS keys start with `appl_`, Android keys with `goog_`.
 const _revenueCatApiKeyIos = 'appl_HjYgkiUcQvTnQBkqFHqHAPuuoXw';
-const _revenueCatApiKeyAndroid = ''; // TODO: paste goog_... from RevenueCat dashboard once Android app is added
+const _revenueCatApiKeyAndroid = 'goog_hCDSCGdNHQddAdJhdEnlNfidVKE';
 
 String? _resolveRevenueCatKey() {
   if (kIsWeb) return null;
