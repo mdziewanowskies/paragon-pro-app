@@ -1,0 +1,17 @@
+# Copy this file to `key.properties` (sibling to this one) and fill in
+# the four values below. The real `key.properties` is gitignored —
+# never commit it. Same goes for the .jks file itself.
+#
+# Generate the keystore once:
+#   keytool -genkey -v -keystore ~/paragon-upload.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias paragon
+#
+# Back up the .jks + passwords somewhere safe (1Password / Bitwarden).
+# Losing the keystore means you cannot ship updates of the app
+# under the same Play Store listing — Play App Signing rotation is
+# possible but messy.
+
+storeFile=/absolute/path/to/paragon-upload.jks
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=paragon
+keyPassword=YOUR_KEY_PASSWORD
