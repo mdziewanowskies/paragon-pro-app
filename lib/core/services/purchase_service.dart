@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +7,24 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'supabase_service.dart';
 
-const _revenueCatApiKey = 'appl_HjYgkiUcQvTnQBkqFHqHAPuuoXw';
+// RevenueCat exposes a separate public app-specific API key per
+// platform. Both come from the RevenueCat dashboard → Project →
+// API keys. iOS keys start with `appl_`, Android keys with `goog_`.
+const _revenueCatApiKeyIos = 'appl_HjYgkiUcQvTnQBkqFHqHAPuuoXw';
+const _revenueCatApiKeyAndroid = ''; // TODO: paste goog_... from RevenueCat dashboard once Android app is added
+
+String? _resolveRevenueCatKey() {
+  if (kIsWeb) return null;
+  if (Platform.isIOS) {
+    return _revenueCatApiKeyIos.isEmpty ? null : _revenueCatApiKeyIos;
+  }
+  if (Platform.isAndroid) {
+    return _revenueCatApiKeyAndroid.isEmpty
+        ? null
+        : _revenueCatApiKeyAndroid;
+  }
+  return null;
+}
 
 class RevenueCatService {
   static bool _initialized = false;
@@ -18,6 +37,13 @@ class RevenueCatService {
   static Future<void> initialize() async {
     if (_initialized) return;
 
+    final apiKey = _resolveRevenueCatKey();
+    if (apiKey == null) {
+      debugPrint(
+          'RevenueCat skipped — no API key for ${kIsWeb ? "web" : Platform.operatingSystem}');
+      return;
+    }
+
     try {
       if (kDebugMode) {
         await Purchases.setLogLevel(LogLevel.debug);
@@ -25,7 +51,7 @@ class RevenueCatService {
 
       final userId = SupabaseService.auth.currentUser?.id;
 
-      final config = PurchasesConfiguration(_revenueCatApiKey);
+      final config = PurchasesConfiguration(apiKey);
       if (userId != null) {
         config..appUserID = userId;
       }
