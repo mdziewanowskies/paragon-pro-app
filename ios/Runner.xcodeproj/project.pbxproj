@@ -17,6 +17,7 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		9ACAAB452FACCA71003967D6 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9ACAAB442FACCA71003967D6 /* StoreKit.framework */; };
 		9ADFCACB2FA4A49B0054B8C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9ADFCACA2FA4A49B0054B8C2 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -66,6 +67,7 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9ACAAB442FACCA71003967D6 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		9ADFCACA2FA4A49B0054B8C2 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		9FD9EBC1D0E0464D4E4F4C93 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		E77044C2CC30EC44AD8485E3 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,6 +87,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				89996C826C91AF3B6D052A75 /* Pods_Runner.framework in Frameworks */,
+				9ACAAB452FACCA71003967D6 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,6 +105,7 @@
 		7076A5968A9057758D2EBF05 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9ACAAB442FACCA71003967D6 /* StoreKit.framework */,
 				E77044C2CC30EC44AD8485E3 /* Pods_Runner.framework */,
 				3F7DA3CD41E6E90ED8655C0A /* Pods_RunnerTests.framework */,
 			);

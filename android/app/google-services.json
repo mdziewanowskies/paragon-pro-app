@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "890227338818",
+    "project_id": "paragonpro-3d3b2",
+    "storage_bucket": "paragonpro-3d3b2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:890227338818:android:43b8ecc64e6cf9d48247db",
+        "android_client_info": {
+          "package_name": "com.paragonpro.paragon_pro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcwezP6NzD9pigNKTvxGx0QJCzWB3WJd4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
