@@ -353,7 +353,7 @@ class _IntroFullScreen extends StatelessWidget {
                             onPressed: onNext,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
-                              foregroundColor: AppColors.primary600,
+                              foregroundColor: AppColors.primary800,
                               padding: const EdgeInsets.symmetric(
                                 vertical: 16,
                               ),
