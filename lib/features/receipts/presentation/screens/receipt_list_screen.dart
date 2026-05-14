@@ -2,7 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'dart:io';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../../../../core/services/receipt_image_cache.dart';
@@ -783,40 +786,55 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       );
                     }
 
-                    return Dismissible(
-                      key: ValueKey(receipt.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 24),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(12),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Slidable(
+                        key: ValueKey(receipt.id),
+                        groupTag: 'receipts',
+                        endActionPane: ActionPane(
+                          motion: const DrawerMotion(),
+                          extentRatio: 0.78,
+                          children: [
+                            SlidableAction(
+                              onPressed: (_) => _showEditDialog(receipt),
+                              backgroundColor: AppColors.surface2,
+                              foregroundColor: AppColors.textPrimary,
+                              icon: Icons.edit_rounded,
+                              label: 'Edytuj',
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.md),
+                            ),
+                            SlidableAction(
+                              onPressed: (_) =>
+                                  _showWarrantyDialog(receipt),
+                              backgroundColor: AppColors.primary500
+                                  .withValues(alpha: 0.18),
+                              foregroundColor: AppColors.primary400,
+                              icon: Icons.shield_rounded,
+                              label: 'Gwarancja',
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.md),
+                            ),
+                            SlidableAction(
+                              onPressed: (_) async {
+                                final ok = await _confirmDelete(receipt);
+                                if (ok == true) _deleteReceipt(receipt);
+                              },
+                              backgroundColor: AppColors.dangerBg,
+                              foregroundColor: AppColors.danger500,
+                              icon: Icons.delete_rounded,
+                              label: 'Usuń',
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.md),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.delete_rounded,
-                            color: Colors.white, size: 28),
-                      ),
-                      confirmDismiss: (_) => _confirmDelete(receipt),
-                      onDismissed: (_) {
-                        Haptics.medium();
-                        ref
-                            .read(receiptRepositoryProvider)
-                            .deleteReceipt(receipt.id);
-                        setState(() => _receipts.removeAt(index));
-                        _loadCounts();
-                      },
-                      child: ReceiptCard(
-                        receipt: receipt,
-                        currentUserId:
-                            SupabaseService.auth.currentUser?.id,
-                        onTap: () => _showImagePreview(receipt),
-                        onEdit: () => _showEditDialog(receipt),
-                        onDelete: () => _deleteReceipt(receipt),
-                        onAddWarranty: () =>
-                            _showWarrantyDialog(receipt),
-                        onComplaint: () =>
-                            _showComplaintDialog(receipt),
+                        child: ReceiptCard(
+                          receipt: receipt,
+                          currentUserId:
+                              SupabaseService.auth.currentUser?.id,
+                          onTap: () => _showImagePreview(receipt),
+                        ),
                       ),
                     );
                   },

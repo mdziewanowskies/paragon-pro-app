@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/category_style.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
@@ -285,15 +287,36 @@ class _StatCard extends StatelessWidget {
 
 // ─── Pie Chart ───────────────────────────────────────────────
 
+/// V3 donut wykres kategorii — semantyczne kolory (Żywność = gold,
+/// Tech = aqua, Auto = violet, Usługi = primary, Inne = gray) z
+/// `CategoryStyle.of()`, plus XL kwota w centrum z captionem.
+///
+/// Audyt: "donut chart w jednej tonacji zielonej — segmentów nie da się
+/// rozróżnić bez legendy. To anty-pattern wykresu" — naprawione przez
+/// reuse tych samych kolorów co karty paragonu.
 class _CategoryPieChart extends StatelessWidget {
   final _AnalyticsData data;
   const _CategoryPieChart({required this.data});
 
-  static const _colors = [
-    Color(0xFF176B47), Color(0xFF1F9663), Color(0xFF27C17F),
-    Color(0xFF4DC98E), Color(0xFF6DD5A8), Color(0xFFF59E0B),
-    Color(0xFF3B82F6), Color(0xFFEF4444), Color(0xFF8B5CF6),
+  /// Fallback dla kategorii spoza palety semantycznej — dystynktywne
+  /// odcienie, ale nie zielone (żeby się nie myliły z primary).
+  static const _fallbackColors = [
+    Color(0xFFEC4899), // pink
+    Color(0xFF14B8A6), // teal
+    Color(0xFF8B5CF6), // indigo
+    Color(0xFFF97316), // orange
   ];
+
+  Color _colorFor(String category, int index) {
+    final visual = CategoryStyle.of(category);
+    // Jeśli kategoria mapuje do "Inne" (fallback w CategoryStyle), używamy
+    // dystynktywnego koloru z _fallbackColors zamiast generic szarego —
+    // żeby segmenty były rozróżnialne.
+    if (visual.color == AppColors.textSecondary) {
+      return _fallbackColors[index % _fallbackColors.length];
+    }
+    return visual.color;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -307,33 +330,64 @@ class _CategoryPieChart extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             SizedBox(
-              height: 200,
-              child: PieChart(
-                PieChartData(
-                  sections: data.categories.asMap().entries.map((e) {
-                    final pct = data.categoriesTotal > 0
-                        ? e.value.value / data.categoriesTotal * 100
-                        : 0;
-                    return PieChartSectionData(
-                      color: _colors[e.key % _colors.length],
-                      value: e.value.value,
-                      title: pct > 5 ? '${pct.toStringAsFixed(0)}%' : '',
-                      radius: 70,
-                      titleStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white),
-                    );
-                  }).toList(),
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 35,
-                ),
+              height: 220,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sections: data.categories.asMap().entries.map((e) {
+                        final pct = data.categoriesTotal > 0
+                            ? e.value.value / data.categoriesTotal * 100
+                            : 0;
+                        return PieChartSectionData(
+                          color: _colorFor(e.value.key, e.key),
+                          value: e.value.value,
+                          title:
+                              pct > 8 ? '${pct.toStringAsFixed(0)}%' : '',
+                          radius: 56,
+                          titleStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        );
+                      }).toList(),
+                      sectionsSpace: 3,
+                      // Większy hole — robi z pie wykresu prawdziwy donut.
+                      centerSpaceRadius: 56,
+                    ),
+                  ),
+                  // Centrum: XL kwota + caption (audyt rekomenduje).
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        Formatters.formatCurrency(data.categoriesTotal),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'razem',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
-            // Legend — percentages always sum to 100% by construction.
             Wrap(
-              spacing: 16,
+              spacing: 14,
               runSpacing: 6,
               children: data.categories.asMap().entries.map((e) {
                 final pct = data.categoriesTotal > 0
@@ -346,14 +400,17 @@ class _CategoryPieChart extends StatelessWidget {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: _colors[e.key % _colors.length],
+                        color: _colorFor(e.value.key, e.key),
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 5),
                     Text(
-                      '${e.value.key}: ${pct.toStringAsFixed(0)}% (${Formatters.formatCurrency(e.value.value)})',
-                      style: const TextStyle(fontSize: 11),
+                      '${e.value.key} · ${pct.toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 );

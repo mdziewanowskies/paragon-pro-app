@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/subscription_service.dart';
@@ -398,7 +399,12 @@ class _InvitationTile extends StatelessWidget {
   }
 }
 
-/// Emoji-based icon — keeps the kind→glyph mapping in one place.
+/// Emoji-based icon — kind → glyph + semantyczny kolor tła.
+///
+/// Audyt: "Kolor ikony po typie zdarzenia (KSeF aqua, Gwarancja warn
+/// pomarańcz, Achievement gold)". Aktualnie tło wszystkich powiadomień
+/// było jednolicie zielone — przez to "1 nowa faktura KSeF" wyglądała
+/// identycznie jak "Gwarancja wygasa za 3 dni".
 class _Icon extends StatelessWidget {
   final NotificationKind kind;
   final String? overrideGlyph;
@@ -432,16 +438,41 @@ class _Icon extends StatelessWidget {
     }
   }
 
+  Color _tint(BuildContext context) {
+    switch (kind) {
+      case NotificationKind.warrantyExpiring:
+        return AppColors.warning500;
+      case NotificationKind.achievementUnlocked:
+        return AppColors.accentGold;
+      case NotificationKind.familyReceipt:
+      case NotificationKind.familyInvitation:
+      case NotificationKind.removedFromFamily:
+        return AppColors.accentViolet;
+      case NotificationKind.monthlyReport:
+        return AppColors.primary400;
+      case NotificationKind.ksefSynced:
+      case NotificationKind.ksefDigest:
+        return AppColors.accentAqua;
+      case NotificationKind.subscriptionExpiring:
+        return AppColors.danger500;
+      case NotificationKind.subscriptionRenewed:
+        return AppColors.primary500;
+      case NotificationKind.system:
+        return Theme.of(context).colorScheme.primary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tint = _tint(context);
     return Container(
       width: 36,
       height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color:
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+        color: tint.withValues(alpha: 0.16),
         shape: BoxShape.circle,
+        border: Border.all(color: tint.withValues(alpha: 0.32), width: 1),
       ),
       child: Text(_glyph(), style: const TextStyle(fontSize: 18)),
     );
