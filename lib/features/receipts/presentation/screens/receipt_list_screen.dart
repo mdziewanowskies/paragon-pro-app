@@ -114,6 +114,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   }
 
   Future<void> _loadCounts() async {
+    if (!mounted) return;
     if (ref.read(tutorialActiveProvider)) {
       setState(() => _counts = {
             ReceiptFilterType.all: 9,
@@ -123,6 +124,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       return;
     }
     try {
+      if (!mounted) return;
       final userId = SupabaseService.auth.currentUser!.id;
       final counts = await ref.read(receiptRepositoryProvider).getCounts(
             userId,
@@ -133,6 +135,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   }
 
   Future<void> _loadReceipts() async {
+    if (!mounted) return;
     // Tutorial mode — pokazujemy demo data zamiast prawdziwych
     // paragonów, żeby user widział pełną kartę listy + gesty.
     if (ref.read(tutorialActiveProvider)) {
@@ -152,6 +155,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     });
 
     try {
+      if (!mounted) return;
       final userId = SupabaseService.auth.currentUser!.id;
       final data = await ref.read(receiptRepositoryProvider).getReceipts(
             userId: userId,
@@ -303,6 +307,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     if (refreshSignal != _lastRefreshSignal) {
       _lastRefreshSignal = refreshSignal;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         _loadReceipts();
         _loadCounts();
       });
@@ -312,7 +317,9 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     ref.listen<bool>(tutorialActiveProvider, (prev, next) {
       if (prev != next) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _loadReceipts();
+          if (!mounted) return;
+          _loadReceipts();
+          _loadCounts();
         });
       }
     });

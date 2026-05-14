@@ -34,6 +34,16 @@ class CoachmarkTarget extends ConsumerStatefulWidget {
 
 class _CoachmarkTargetState extends ConsumerState<CoachmarkTarget> {
   final GlobalKey _key = GlobalKey();
+  CoachmarkController? _controller;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cache'ujemy notifier — `ref` jest niedostępny w dispose(),
+    // a tutaj możemy je bezpiecznie odczytać przy każdym
+    // remount/parent change.
+    _controller = ref.read(coachmarkControllerProvider.notifier);
+  }
 
   @override
   void initState() {
@@ -48,9 +58,7 @@ class _CoachmarkTargetState extends ConsumerState<CoachmarkTarget> {
 
   @override
   void dispose() {
-    ref
-        .read(coachmarkControllerProvider.notifier)
-        .unregister(widget.stepId, _key);
+    _controller?.unregister(widget.stepId, _key);
     super.dispose();
   }
 
