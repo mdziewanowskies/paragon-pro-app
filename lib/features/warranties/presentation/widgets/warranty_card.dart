@@ -233,8 +233,8 @@ class _Timeline extends StatelessWidget {
     final progressClamped = progress.clamp(0.0, 1.0);
 
     return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
         // Marker ma się mieścić w track'u — zostawiamy 10 px paddingu
         // po obu stronach żeby kropka nie była uciętą półokrężnicą.
         final markerX = (progressClamped * (w - 16)).clamp(0.0, w - 16);
