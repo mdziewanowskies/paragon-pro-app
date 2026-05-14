@@ -226,6 +226,37 @@ class AppTheme {
           type: BottomNavigationBarType.fixed,
           elevation: 8,
         ),
+        // Material 3 NavigationBar (używany w DashboardScreen).
+        // Capsule pod aktywnym tabem to standard M3 — dodajemy
+        // semantyczne kolory (primary400 z opacity 0.16) zamiast
+        // niebieskiego defaultu.
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: AppColors.surface0,
+          indicatorColor: AppColors.primary400.withValues(alpha: 0.16),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          height: 72,
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected
+                  ? AppColors.primary400
+                  : AppColors.textSecondary,
+              letterSpacing: 0.2,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              size: 24,
+              color: selected
+                  ? AppColors.primary400
+                  : AppColors.textSecondary,
+            );
+          }),
+        ),
         tabBarTheme: TabBarThemeData(
           labelColor: AppColors.darkAccent,
           unselectedLabelColor: AppColors.darkMutedForeground,

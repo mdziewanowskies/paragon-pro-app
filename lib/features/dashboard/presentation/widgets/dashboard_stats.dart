@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../shared/widgets/animated_counter.dart';
+import '../../../../shared/widgets/stat_card.dart';
 
+/// V3 stats grid 2×2 — każda karta dostaje swój semantyczny kolor.
+/// Audyt: "primary green tylko jako akcent, karty stat dostają 4 różne
+/// kolory (success / info / highlight / gold)".
 class DashboardStats extends StatelessWidget {
   final double totalExpenses;
   final double avgExpenses;
@@ -10,6 +12,24 @@ class DashboardStats extends StatelessWidget {
   final int activeWarranties;
   final String topCategory;
   final String topMerchant;
+
+  /// Procentowy udział top kategorii w wydatkach (np. 56). Renderuje
+  /// się w stopce karty "Top kategoria" jako mini-delta.
+  final double? topCategoryShare;
+
+  /// Wartość wydana w top kategorii — fallback do `topMerchant`
+  /// jeśli nieznana.
+  final double? topCategoryAmount;
+
+  /// Delta % wydatków vs poprzedni miesiąc (np. -12 = mniej o 12%,
+  /// 8 = więcej o 8%). Null = ukrywamy linię delty.
+  final double? expensesDelta;
+
+  /// Liczba paragonów dodanych w ostatnich 7 dniach.
+  final int? receiptsThisWeek;
+
+  /// Liczba gwarancji wygasających w ciągu najbliższych 14 dni.
+  final int? warrantiesExpiringSoon;
 
   const DashboardStats({
     super.key,
@@ -19,6 +39,11 @@ class DashboardStats extends StatelessWidget {
     this.activeWarranties = 0,
     this.topCategory = '-',
     this.topMerchant = '-',
+    this.topCategoryShare,
+    this.topCategoryAmount,
+    this.expensesDelta,
+    this.receiptsThisWeek,
+    this.warrantiesExpiringSoon,
   });
 
   @override
@@ -29,159 +54,54 @@ class DashboardStats extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      childAspectRatio: 1.35,
       children: [
-        _StatCard(
+        StatCard(
           icon: Icons.account_balance_wallet_rounded,
-          title: 'Łączne wydatki',
+          variant: StatCardVariant.success,
           value: Formatters.formatCurrency(totalExpenses),
-          subtitle: 'Średnia: ${Formatters.formatCurrency(avgExpenses)}',
-          gradient: AppColors.heroGradient,
+          caption: 'wydatki w tym miesiącu',
+          delta: _formatExpensesDelta(),
         ),
-        _StatCard(
+        StatCard(
           icon: Icons.receipt_long_rounded,
-          title: 'Paragony',
-          valueWidget: AnimatedCounter(
-            value: receiptCount,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-          subtitle: 'Wszystkie paragony',
-          gradient: AppColors.accentGradient,
+          variant: StatCardVariant.info,
+          value: receiptCount.toString(),
+          caption: 'paragony zeskanowane',
+          delta: receiptsThisWeek != null && receiptsThisWeek! > 0
+              ? '+$receiptsThisWeek w tym tygodniu'
+              : null,
         ),
-        _StatCard(
+        StatCard(
           icon: Icons.shield_rounded,
-          title: 'Gwarancje',
-          valueWidget: AnimatedCounter(
-            value: activeWarranties,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          subtitle: 'Aktywne',
-          isSecondary: true,
+          variant: StatCardVariant.highlight,
+          value: activeWarranties.toString(),
+          caption: 'aktywne gwarancje',
+          delta:
+              warrantiesExpiringSoon != null && warrantiesExpiringSoon! > 0
+                  ? '⚠ $warrantiesExpiringSoon wygasa wkrótce'
+                  : null,
         ),
-        _StatCard(
+        StatCard(
           icon: Icons.category_rounded,
-          title: 'Top kategoria',
+          variant: StatCardVariant.gold,
           value: topCategory,
-          subtitle: topMerchant,
-          isPrimary: true,
+          caption: topCategoryShare != null
+              ? 'top kategoria · ${topCategoryShare!.toStringAsFixed(0)}%'
+              : 'top kategoria',
+          delta: topCategoryAmount != null
+              ? Formatters.formatCurrency(topCategoryAmount!)
+              : (topMerchant != '-' ? topMerchant : null),
         ),
       ],
     );
   }
-}
 
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String? value;
-  final Widget? valueWidget;
-  final String subtitle;
-  final LinearGradient? gradient;
-  final bool isSecondary;
-  final bool isPrimary;
-
-  const _StatCard({
-    required this.icon,
-    required this.title,
-    this.value,
-    this.valueWidget,
-    required this.subtitle,
-    this.gradient,
-    this.isSecondary = false,
-    this.isPrimary = false,
-  }) : assert(value != null || valueWidget != null);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasGradient = gradient != null;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: hasGradient ? gradient : null,
-        color: hasGradient
-            ? null
-            : isSecondary
-                ? (isDark ? AppColors.darkSecondary : AppColors.lightSecondary)
-                : isPrimary
-                    ? (isDark
-                        ? AppColors.darkPrimary.withValues(alpha: 0.3)
-                        : AppColors.lightPrimary.withValues(alpha: 0.1))
-                    : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: hasGradient
-            ? null
-            : Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: hasGradient
-                    ? Colors.white.withValues(alpha: 0.8)
-                    : Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: hasGradient
-                        ? Colors.white.withValues(alpha: 0.8)
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          valueWidget ??
-              Text(
-                value!,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: hasGradient
-                      ? Colors.white
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 11,
-              color: hasGradient
-                  ? Colors.white.withValues(alpha: 0.7)
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
+  String? _formatExpensesDelta() {
+    if (expensesDelta == null || expensesDelta == 0) return null;
+    final up = expensesDelta! > 0;
+    final symbol = up ? '▲' : '▼';
+    final pct = expensesDelta!.abs().toStringAsFixed(0);
+    return '$symbol $pct% wzgl. zeszłego mies.';
   }
 }

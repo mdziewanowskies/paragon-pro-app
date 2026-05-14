@@ -9,10 +9,10 @@ import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/dashboard_stats.dart';
 import '../widgets/gamification_progress.dart';
-import '../widgets/welcome_banner.dart';
 import '../../../receipts/presentation/screens/receipt_list_screen.dart';
 import '../../../receipts/presentation/widgets/receipt_upload.dart';
 import '../../../receipts/data/receipt_repository.dart';
@@ -70,21 +70,51 @@ final dashboardStatsProvider =
         .key;
   }
 
+  // Liczbowo: udział top kategorii w wydatkach oraz jej suma w PLN
+  // — używane przez StatCard "Top kategoria" (caption "56%" + delta).
+  double topCategoryShare = 0;
+  double topCategoryAmount = 0;
+  final receiptCategoriesTotal = receiptCategories.values
+      .fold<double>(0, (sum, v) => sum + v);
+  if (topCategory != '-' && receiptCategoriesTotal > 0) {
+    topCategoryAmount = receiptCategories[topCategory] ?? 0;
+    topCategoryShare = topCategoryAmount / receiptCategoriesTotal * 100;
+  }
+
+  // Paragony dodane w ostatnich 7 dniach — mini-delta do karty paragonów.
+  final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+  final receiptsThisWeek =
+      receipts.where((r) => r.uploadedAt.isAfter(weekAgo)).length;
+
   final now = DateTime.now().toIso8601String().split('T').first;
   final warranties = await SupabaseService.client
       .from('warranties')
-      .select('id')
+      .select('id, end_date')
       .eq('user_id', userId)
       .gte('end_date', now);
   final activeWarranties = (warranties as List).length;
+  // Wygasające w ciągu najbliższych 14 dni — warning delta na karcie.
+  final soon = DateTime.now()
+      .add(const Duration(days: 14))
+      .toIso8601String()
+      .split('T')
+      .first;
+  final warrantiesExpiringSoon = warranties.where((w) {
+    final end = w['end_date'] as String?;
+    return end != null && end.compareTo(now) >= 0 && end.compareTo(soon) <= 0;
+  }).length;
 
   return {
     'totalExpenses': total,
     'avgExpenses': avg,
     'receiptCount': receipts.length,
+    'receiptsThisWeek': receiptsThisWeek,
     'activeWarranties': activeWarranties,
+    'warrantiesExpiringSoon': warrantiesExpiringSoon,
     'topCategory': topCategory,
     'topMerchant': topMerchant,
+    'topCategoryShare': topCategoryShare,
+    'topCategoryAmount': topCategoryAmount,
   };
 });
 
@@ -277,7 +307,11 @@ class _HomeTab extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                WelcomeBanner(userName: profile.value?.firstName),
+                _HomeHeroHeader(
+                  userName: profile.value?.firstName,
+                  stats: stats,
+                  gamification: gamification,
+                ),
                 const SizedBox(height: 16),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 320),
@@ -296,12 +330,20 @@ class _HomeTab extends ConsumerWidget {
                             data['totalExpenses'] as double? ?? 0,
                         avgExpenses: data['avgExpenses'] as double? ?? 0,
                         receiptCount: data['receiptCount'] as int? ?? 0,
+                        receiptsThisWeek:
+                            data['receiptsThisWeek'] as int?,
                         activeWarranties:
                             data['activeWarranties'] as int? ?? 0,
+                        warrantiesExpiringSoon:
+                            data['warrantiesExpiringSoon'] as int?,
                         topCategory:
                             data['topCategory'] as String? ?? '-',
                         topMerchant:
                             data['topMerchant'] as String? ?? '-',
+                        topCategoryShare:
+                            data['topCategoryShare'] as double?,
+                        topCategoryAmount:
+                            data['topCategoryAmount'] as double?,
                       ),
                     ),
                   ),
@@ -802,5 +844,64 @@ class _KsefSummary extends ConsumerWidget {
     } catch (_) {
       return 0;
     }
+  }
+}
+
+/// V3 home hero — gradient header z greetingiem, kwotą XL miesiąca i
+/// pillem poziomu. Zastępuje stary `WelcomeBanner` (jasnozielony pasek
+/// na ciemnozielonym = niski kontrast).
+class _HomeHeroHeader extends StatelessWidget {
+  final String? userName;
+  final AsyncValue<Map<String, dynamic>> stats;
+  final AsyncValue<Map<String, dynamic>> gamification;
+
+  const _HomeHeroHeader({
+    required this.userName,
+    required this.stats,
+    required this.gamification,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final greetName = (userName != null && userName!.trim().isNotEmpty)
+        ? userName!.trim()
+        : 'tutaj';
+    final overline = 'Cześć, $greetName 👋';
+
+    final data = stats.valueOrNull ?? const <String, dynamic>{};
+    final total = (data['totalExpenses'] as double?) ?? 0;
+    final count = (data['receiptCount'] as int?) ?? 0;
+
+    final gami = gamification.valueOrNull ?? const <String, dynamic>{};
+    final level = (gami['level'] as int?) ?? 1;
+    final points = (gami['points'] as int?) ?? 0;
+
+    final title = Formatters.formatCurrency(total);
+    final caption = count > 0
+        ? 'wydatków w tym miesiącu · $count ${_paragonyForm(count)}'
+        : 'zacznij od pierwszego paragonu';
+
+    return HeroHeader(
+      overline: overline,
+      title: title,
+      caption: caption,
+      pills: [
+        HeroPill(
+          icon: Icons.emoji_events_rounded,
+          label: 'Poziom $level · $points pkt',
+        ),
+      ],
+    );
+  }
+
+  String _paragonyForm(int n) {
+    // Polish plural — 1 paragon, 2-4 paragony, 5+ paragonów.
+    if (n == 1) return 'paragon';
+    final mod10 = n % 10;
+    final mod100 = n % 100;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      return 'paragony';
+    }
+    return 'paragonów';
   }
 }
