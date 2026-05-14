@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -89,6 +90,7 @@ class _WarrantyListScreenState extends ConsumerState<WarrantyListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final warranties = ref.watch(warrantyListProvider);
 
     return warranties.when(
@@ -150,7 +152,7 @@ class _WarrantyListScreenState extends ConsumerState<WarrantyListScreen> {
                     accentColor: _tab == _WarrantyTab.expiring
                         ? AppColors.warning500
                         : _tab == _WarrantyTab.archive
-                            ? AppColors.textTertiary
+                            ? c.textTertiary
                             : AppColors.primary400,
                   ),
                 )
@@ -318,9 +320,10 @@ class _SegmentedControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: c.surface1,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       padding: const EdgeInsets.all(4),
@@ -362,9 +365,11 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.sm),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -389,7 +394,7 @@ class _SegmentButton extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: selected
                         ? Colors.white
-                        : AppColors.textSecondary,
+                        : c.textSecondary,
                   ),
                 ),
               ),
@@ -401,7 +406,7 @@ class _SegmentButton extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: selected
                         ? Colors.white.withValues(alpha: 0.22)
-                        : AppColors.surface2,
+                        : c.surface2,
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                   child: Text(
@@ -411,7 +416,7 @@ class _SegmentButton extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: selected
                           ? Colors.white
-                          : AppColors.textSecondary,
+                          : c.textSecondary,
                     ),
                   ),
                 ),

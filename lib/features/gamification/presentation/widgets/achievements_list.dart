@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../shared/widgets/celebration_overlay.dart';
@@ -97,6 +98,7 @@ class _AchievementTileState extends State<_AchievementTile>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final a = widget.achievement;
     final unlocked = widget.unlocked;
     return GestureDetector(
@@ -111,12 +113,12 @@ class _AchievementTileState extends State<_AchievementTile>
           decoration: BoxDecoration(
             color: unlocked
                 ? AppColors.accentGold.withValues(alpha: 0.12)
-                : AppColors.surface1,
+                : c.surface1,
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(
               color: unlocked
                   ? AppColors.accentGold.withValues(alpha: 0.5)
-                  : AppColors.surfaceDivider,
+                  : c.surfaceDivider,
               width: unlocked ? 1.5 : 1,
             ),
             boxShadow: unlocked
@@ -133,13 +135,13 @@ class _AchievementTileState extends State<_AchievementTile>
           child: Stack(
             children: [
               if (!unlocked)
-                const Positioned(
+                Positioned(
                   top: 0,
                   right: 0,
                   child: Icon(
                     Icons.lock_rounded,
                     size: 12,
-                    color: AppColors.textTertiary,
+                    color: c.textTertiary,
                   ),
                 ),
               Column(
@@ -159,8 +161,8 @@ class _AchievementTileState extends State<_AchievementTile>
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: unlocked
-                          ? AppColors.textPrimary
-                          : AppColors.textTertiary,
+                          ? c.textPrimary
+                          : c.textTertiary,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
@@ -174,7 +176,7 @@ class _AchievementTileState extends State<_AchievementTile>
                       fontWeight: FontWeight.w800,
                       color: unlocked
                           ? AppColors.accentGoldDeep
-                          : AppColors.textTertiary,
+                          : c.textTertiary,
                       letterSpacing: 0.2,
                     ),
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/subscription_service.dart';
@@ -196,12 +197,13 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary,
+        color: c.textSecondary,
       ),
     );
   }
@@ -229,9 +231,10 @@ class _PerksCard extends StatelessWidget {
             ('Wsparcie', 'standard', true),
           ];
 
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: c.surface1,
         borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: AppShadows.md,
       ),
@@ -246,7 +249,7 @@ class _PerksCard extends StatelessWidget {
               enabled: perks[i].$3,
             ),
             if (i < perks.length - 1)
-              const Divider(height: 1, color: AppColors.surfaceDivider),
+              Divider(height: 1, color: c.surfaceDivider),
           ],
         ],
       ),
@@ -267,6 +270,7 @@ class _PerkRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -276,7 +280,7 @@ class _PerkRow extends StatelessWidget {
             size: 18,
             color: enabled
                 ? AppColors.primary400
-                : AppColors.textTertiary,
+                : c.textTertiary,
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -285,8 +289,8 @@ class _PerkRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 color: enabled
-                    ? AppColors.textPrimary
-                    : AppColors.textTertiary,
+                    ? c.textPrimary
+                    : c.textTertiary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -296,8 +300,8 @@ class _PerkRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               color: enabled
-                  ? AppColors.textSecondary
-                  : AppColors.textTertiary,
+                  ? c.textSecondary
+                  : c.textTertiary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -314,6 +318,7 @@ class _InfoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -332,9 +337,9 @@ class _InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 height: 1.4,
               ),
             ),

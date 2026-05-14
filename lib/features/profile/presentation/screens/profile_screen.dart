@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/profile_service.dart';
@@ -105,7 +106,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               _NavCard(
                 icon: Icons.settings_rounded,
-                iconColor: AppColors.textSecondary,
+                iconColor: context.colors.textSecondary,
                 title: 'Ustawienia aplikacji',
                 subtitle: 'Język, motyw, powiadomienia',
                 onTap: () => context.go('/settings'),
@@ -240,15 +241,17 @@ class _NavCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppColors.surface1,
+            color: c.surface1,
             borderRadius: BorderRadius.circular(AppRadius.md),
             boxShadow: AppShadows.md,
           ),
@@ -278,10 +281,10 @@ class _NavCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -289,18 +292,18 @@ class _NavCard extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: c.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
                 size: 22,
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
               ),
             ],
           ),
@@ -319,6 +322,7 @@ class _LogoutTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onLogout,
         borderRadius: BorderRadius.circular(AppRadius.md),

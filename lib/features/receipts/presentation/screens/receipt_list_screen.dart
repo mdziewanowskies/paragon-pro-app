@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'dart:io';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../shared/widgets/skeletons.dart';
@@ -275,6 +276,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final refreshSignal = ref.watch(receiptListRefreshProvider);
     if (refreshSignal != _lastRefreshSignal) {
       _lastRefreshSignal = refreshSignal;
@@ -800,8 +802,8 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                           children: [
                             SlidableAction(
                               onPressed: (_) => _showEditDialog(receipt),
-                              backgroundColor: AppColors.surface2,
-                              foregroundColor: AppColors.textPrimary,
+                              backgroundColor: c.surface2,
+                              foregroundColor: c.textPrimary,
                               icon: Icons.edit_rounded,
                               label: 'Edytuj',
                               borderRadius:

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/utils/validators.dart';
@@ -97,6 +97,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
+    final c = context.colors;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -175,7 +176,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
                           Container(
                             width: 1,
                             height: 56,
-                            color: AppColors.surfaceDivider,
+                            color: c.surfaceDivider,
                           ),
                           Expanded(
                             child: _Field(
@@ -278,12 +279,13 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary,
+        color: c.textSecondary,
       ),
     );
   }
@@ -295,9 +297,10 @@ class _CardBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: c.surface1,
         borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: AppShadows.md,
       ),
@@ -314,9 +317,10 @@ class _CardDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(
+    final c = context.colors;
+    return Divider(
       height: 1,
-      color: AppColors.surfaceDivider,
+      color: c.surfaceDivider,
       indent: 16,
     );
   }

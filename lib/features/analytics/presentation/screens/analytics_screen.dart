@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../app/theme/category_style.dart';
 import '../../../../core/services/haptics.dart';
@@ -326,6 +327,7 @@ class _CategoryPieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -382,7 +384,7 @@ class _CategoryPieChart extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
+                          color: c.textSecondary,
                           letterSpacing: 0.4,
                         ),
                       ),
@@ -440,6 +442,7 @@ class _DailyBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     if (data.daily.isEmpty) return const SizedBox.shrink();
 
     final maxY = data.daily
@@ -461,9 +464,9 @@ class _DailyBarChart extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Tap na słupek = szczegóły dnia',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -501,9 +504,9 @@ class _DailyBarChart extends StatelessWidget {
                         reservedSize: 50,
                         getTitlesWidget: (value, _) => Text(
                           Formatters.formatCurrencyShort(value),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 9,
-                            color: AppColors.textTertiary,
+                            color: c.textTertiary,
                           ),
                         ),
                       ),
@@ -526,9 +529,9 @@ class _DailyBarChart extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
                               '$day',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
-                                color: AppColors.textTertiary,
+                                color: c.textTertiary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -547,7 +550,7 @@ class _DailyBarChart extends StatelessWidget {
                     drawVerticalLine: false,
                     horizontalInterval: maxY > 0 ? maxY / 4 : 100,
                     getDrawingHorizontalLine: (_) => FlLine(
-                      color: AppColors.surfaceDivider.withValues(alpha: 0.5),
+                      color: c.surfaceDivider.withValues(alpha: 0.5),
                       strokeWidth: 1,
                     ),
                   ),

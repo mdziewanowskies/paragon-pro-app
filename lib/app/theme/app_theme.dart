@@ -103,6 +103,37 @@ class AppTheme {
           type: BottomNavigationBarType.fixed,
           elevation: 8,
         ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: AppColors.lightBackground,
+          indicatorColor: AppColors.primary400.withValues(alpha: 0.16),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          height: 72,
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected
+                  ? AppColors.primary400
+                  : AppColors.lightMutedForeground,
+              letterSpacing: 0.2,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              size: 24,
+              color: selected
+                  ? AppColors.primary400
+                  : AppColors.lightMutedForeground,
+            );
+          }),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+        ),
         tabBarTheme: TabBarThemeData(
           labelColor: AppColors.lightPrimary,
           unselectedLabelColor: AppColors.lightMutedForeground,
@@ -259,6 +290,10 @@ class AppTheme {
                   : AppColors.textSecondary,
             );
           }),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
         ),
         tabBarTheme: TabBarThemeData(
           labelColor: AppColors.darkAccent,

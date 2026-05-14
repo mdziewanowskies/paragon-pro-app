@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../screens/warranty_list_screen.dart';
@@ -23,6 +24,7 @@ class WarrantyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final accent = _accentColor();
     final productName = _productName();
     final hasProductName =
@@ -31,12 +33,13 @@ class WarrantyCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppColors.surface1,
+            color: c.surface1,
             borderRadius: BorderRadius.circular(AppRadius.md),
             boxShadow: AppShadows.md,
           ),
@@ -64,10 +67,10 @@ class WarrantyCard extends StatelessWidget {
                           productName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                             height: 1.2,
                           ),
                         ),
@@ -76,9 +79,9 @@ class WarrantyCard extends StatelessWidget {
                           _captionLine(hasProductName),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textSecondary,
+                            color: c.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -222,6 +225,7 @@ class _Timeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final now = DateTime.now();
     final total = end.difference(start).inDays;
     final elapsed = now.difference(start).inDays.clamp(0, total);
@@ -246,7 +250,7 @@ class _Timeline extends StatelessWidget {
                 child: Container(
                   height: 6,
                   decoration: BoxDecoration(
-                    color: AppColors.surface2,
+                    color: c.surface2,
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                   child: FractionallySizedBox(
@@ -277,7 +281,7 @@ class _Timeline extends StatelessWidget {
                         height: 16,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.surface0,
+                          color: c.surface0,
                           border: Border.all(color: accent, width: 3),
                           boxShadow: AppShadows.sm,
                         ),
@@ -291,9 +295,9 @@ class _Timeline extends StatelessWidget {
                 bottom: 0,
                 child: Text(
                   Formatters.formatDate(start),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textTertiary,
+                    color: c.textTertiary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -303,9 +307,9 @@ class _Timeline extends StatelessWidget {
                 bottom: 0,
                 child: Text(
                   Formatters.formatDate(end),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textTertiary,
+                    color: c.textTertiary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

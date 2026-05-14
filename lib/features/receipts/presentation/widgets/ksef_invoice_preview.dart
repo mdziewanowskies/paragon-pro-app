@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/utils/formatters.dart';
@@ -41,10 +42,11 @@ class KsefInvoiceSheet extends StatelessWidget {
       minChildSize: 0.45,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
+        final c = context.colors;
         return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface0,
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: c.surface0,
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(AppRadius.lg),
               topRight: Radius.circular(AppRadius.lg),
             ),
@@ -58,7 +60,7 @@ class KsefInvoiceSheet extends StatelessWidget {
                   width: 44,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: c.textTertiary.withValues(alpha: 0.32),
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                 ),
@@ -85,19 +87,19 @@ class KsefInvoiceSheet extends StatelessWidget {
                             merchant,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: c.textPrimary,
                               height: 1.2,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Faktura · ${Formatters.formatRelativeDate(receipt.purchaseDate)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: c.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -112,10 +114,10 @@ class KsefInvoiceSheet extends StatelessWidget {
                         Text(
                           Formatters.formatCurrency(
                               receipt.grossAmount ?? receipt.amount),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                             letterSpacing: -0.5,
                             height: 1.0,
                           ),
@@ -125,7 +127,7 @@ class KsefInvoiceSheet extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.surface2,
+                            color: c.surface2,
                             borderRadius:
                                 BorderRadius.circular(AppRadius.full),
                           ),
@@ -133,10 +135,10 @@ class KsefInvoiceSheet extends StatelessWidget {
                             receipt.vatRate != null
                                 ? 'VAT ${receipt.vatRate}'
                                 : 'wystawiona',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondary,
+                              color: c.textSecondary,
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -161,10 +163,10 @@ class KsefInvoiceSheet extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       merchant,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
                     if (receipt.sellerNip != null) ...[
@@ -298,13 +300,14 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     // Audyt: "nagłówki Sentence Case 13/600 (#9CA3AF), nie uppercase".
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary,
+        color: c.textSecondary,
         letterSpacing: 0.1,
       ),
     );
@@ -318,16 +321,17 @@ class _MetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
-        Icon(icon, size: 14, color: AppColors.textTertiary),
+        Icon(icon, size: 14, color: c.textTertiary),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -349,6 +353,7 @@ class _DetailLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -358,9 +363,9 @@ class _DetailLine extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -372,7 +377,7 @@ class _DetailLine extends StatelessWidget {
               fontWeight: emphasis ? FontWeight.w800 : FontWeight.w600,
               color: emphasis
                   ? AppColors.primary400
-                  : AppColors.textPrimary,
+                  : c.textPrimary,
             ),
           ),
         ],
@@ -387,15 +392,16 @@ class _KsefIdRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: c.surface1,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.surfaceDivider),
+        border: Border.all(color: c.surfaceDivider),
       ),
       child: Row(
         children: [
@@ -404,10 +410,10 @@ class _KsefIdRow extends StatelessWidget {
               ksefNumber,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 11,
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 letterSpacing: 0.2,
               ),
             ),
@@ -480,10 +486,11 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      color: AppColors.surfaceDivider,
+      color: c.surfaceDivider,
     );
   }
 }

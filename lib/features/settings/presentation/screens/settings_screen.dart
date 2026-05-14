@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../app/theme/theme_mode_provider.dart';
 import '../../../../core/services/auth_service.dart';
@@ -18,6 +19,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -90,13 +92,13 @@ class SettingsScreen extends ConsumerWidget {
           _Section([
             _SettingTile(
               icon: Icons.privacy_tip_outlined,
-              iconColor: AppColors.textSecondary,
+              iconColor: c.textSecondary,
               label: 'Polityka prywatności',
               onTap: () => _showPrivacyDialog(context),
             ),
             _SettingTile(
               icon: Icons.description_outlined,
-              iconColor: AppColors.textSecondary,
+              iconColor: c.textSecondary,
               label: 'Regulamin',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             _SettingTile(
               icon: Icons.info_outline_rounded,
-              iconColor: AppColors.textSecondary,
+              iconColor: c.textSecondary,
               label: 'Wersja aplikacji',
               trailingText: '1.0.0',
               onTap: null,
@@ -256,14 +258,15 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary,
+          color: c.textSecondary,
         ),
       ),
     );
@@ -281,9 +284,10 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: c.surface1,
         borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: AppShadows.md,
       ),
@@ -294,10 +298,10 @@ class _Section extends StatelessWidget {
             for (var i = 0; i < children.length; i++) ...[
               children[i],
               if (i < children.length - 1)
-                const Divider(
+                Divider(
                   height: 1,
                   indent: 56,
-                  color: AppColors.surfaceDivider,
+                  color: c.surfaceDivider,
                 ),
             ],
           ],
@@ -324,6 +328,7 @@ class _SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -349,28 +354,28 @@ class _SettingTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                   ),
                 ),
               ),
               if (trailingText != null)
                 Text(
                   trailingText!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: c.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               if (onTap != null) ...[
                 const SizedBox(width: 4),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
-                  color: AppColors.textTertiary,
+                  color: c.textTertiary,
                 ),
               ],
             ],
@@ -387,9 +392,11 @@ class _DangerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -405,17 +412,17 @@ class _DangerTile extends StatelessWidget {
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.delete_forever_rounded,
+              const Icon(Icons.delete_forever_rounded,
                   size: 22, color: AppColors.danger500),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
+                    const Text(
                       'Usuń konto',
                       style: TextStyle(
                         fontSize: 14,
@@ -423,18 +430,18 @@ class _DangerTile extends StatelessWidget {
                         color: AppColors.danger500,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
                       'Trwale usuwa konto i wszystkie dane',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: c.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
                 color: AppColors.danger500,
@@ -453,9 +460,9 @@ void _showThemeSheet(BuildContext context, WidgetRef ref) {
     context: context,
     backgroundColor: Colors.transparent,
     builder: (sheetCtx) => Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface0,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: context.colors.surface0,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(AppRadius.lg),
           topRight: Radius.circular(AppRadius.lg),
         ),
@@ -479,25 +486,25 @@ void _showThemeSheet(BuildContext context, WidgetRef ref) {
                   height: 5,
                   margin: const EdgeInsets.only(bottom: AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: context.colors.textTertiary.withValues(alpha: 0.32),
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                 ),
               ),
-              const Text(
+              Text(
                 'Motyw aplikacji',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: context.colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
-              const Text(
+              Text(
                 'Wybierz tryb wyświetlania albo śledź ustawienia systemu',
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary,
+                  color: context.colors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -590,9 +597,11 @@ class _ThemeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -600,12 +609,12 @@ class _ThemeOption extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected
                 ? AppColors.primary500.withValues(alpha: 0.12)
-                : AppColors.surface1,
+                : c.surface1,
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(
               color: selected
                   ? AppColors.primary500
-                  : AppColors.surfaceDivider,
+                  : c.surfaceDivider,
               width: selected ? 1.5 : 1,
             ),
           ),
@@ -617,7 +626,7 @@ class _ThemeOption extends StatelessWidget {
                 size: 22,
                 color: selected
                     ? AppColors.primary400
-                    : AppColors.textSecondary,
+                    : c.textSecondary,
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -627,18 +636,18 @@ class _ThemeOption extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: c.textSecondary,
                       ),
                     ),
                   ],

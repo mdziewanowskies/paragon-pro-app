@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../app/theme/category_style.dart';
 import '../../../../core/services/haptics.dart';
@@ -69,10 +70,11 @@ class ReceiptPreviewSheet extends StatelessWidget {
       minChildSize: 0.45,
       maxChildSize: 0.92,
       builder: (context, scrollController) {
+        final c = context.colors;
         return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface0,
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: c.surface0,
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(AppRadius.lg),
               topRight: Radius.circular(AppRadius.lg),
             ),
@@ -86,7 +88,7 @@ class ReceiptPreviewSheet extends StatelessWidget {
                   width: 44,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: c.textTertiary.withValues(alpha: 0.32),
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                 ),
@@ -149,19 +151,19 @@ class ReceiptPreviewSheet extends StatelessWidget {
                                 _formatMerchant(receipt.merchantName),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
+                                  color: c.textPrimary,
                                   height: 1.2,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 _metaLine(receipt, visual),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.textSecondary,
+                                  color: c.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -175,10 +177,10 @@ class ReceiptPreviewSheet extends StatelessWidget {
                           children: [
                             Text(
                               Formatters.formatCurrency(receipt.amount),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
+                                color: c.textPrimary,
                                 letterSpacing: -0.5,
                                 height: 1.0,
                               ),
@@ -190,16 +192,16 @@ class ReceiptPreviewSheet extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface2,
+                                  color: c.surface2,
                                   borderRadius: BorderRadius.circular(
                                       AppRadius.full),
                                 ),
                                 child: Text(
                                   'VAT ${receipt.vatRate}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary,
+                                    color: c.textSecondary,
                                   ),
                                 ),
                               ),
@@ -214,25 +216,25 @@ class ReceiptPreviewSheet extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
-                          color: AppColors.surface1,
+                          color: c.surface1,
                           borderRadius:
                               BorderRadius.circular(AppRadius.sm),
                           border: Border.all(
-                              color: AppColors.surfaceDivider),
+                              color: c.surfaceDivider),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.sticky_note_2_outlined,
+                            Icon(Icons.sticky_note_2_outlined,
                                 size: 14,
-                                color: AppColors.textTertiary),
+                                color: c.textTertiary),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 receipt.notes!.trim(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: AppColors.textSecondary,
+                                  color: c.textSecondary,
                                   height: 1.4,
                                 ),
                               ),
@@ -395,10 +397,11 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accent ?? AppColors.textPrimary;
+    final color = accent ?? context.colors.textPrimary;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.full),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.full),
@@ -445,7 +448,7 @@ class _IconAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accent ?? AppColors.textSecondary;
+    final color = accent ?? context.colors.textSecondary;
     return Tooltip(
       message: tooltip ?? '',
       child: Material(
