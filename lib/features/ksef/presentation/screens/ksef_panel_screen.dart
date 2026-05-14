@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/share_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/haptics.dart';
@@ -11,6 +12,7 @@ import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/cupertino_date_picker.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/locked_feature_view.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/ksef_settings.dart';
@@ -175,6 +177,12 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Hero header — XL kwota VAT do rozliczenia + termin VAT-7 +
+            // licznik faktur. Audyt: "KSeF hero: XL 'VAT do rozliczenia:
+            // 3 508 zł' + termin 'do 25 czerwca · 10 faktur'".
+            if (hasKsefToken)
+              _KsefHero(invoices: invoices),
+
             // KSeF settings — only when not configured
             if (!hasKsefToken) ...[
               KsefSettings(
@@ -182,6 +190,7 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            if (hasKsefToken) const SizedBox(height: 16),
 
             // Sync section — only when configured
             if (hasKsefToken) ...[
@@ -310,6 +319,73 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Hero header dla zakładki KSeF. Liczy VAT do rozliczenia z listy
+/// faktur i pokazuje termin VAT-7 (25 dnia następnego miesiąca).
+class _KsefHero extends StatelessWidget {
+  final AsyncValue<List<ReceiptModel>> invoices;
+  const _KsefHero({required this.invoices});
+
+  @override
+  Widget build(BuildContext context) {
+    final list = invoices.valueOrNull ?? const <ReceiptModel>[];
+    // Sumujemy VAT z faktur w bieżącym miesiącu. Backend powinien
+    // ostatecznie udostępnić to jako pre-aggregate, na razie obliczamy
+    // lokalnie z dostępnych invoices.
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    double vatTotal = 0;
+    int count = 0;
+    for (final inv in list) {
+      final date = inv.purchaseDate;
+      if (date == null) continue;
+      if (date.isBefore(monthStart)) continue;
+      vatTotal += inv.vatAmount ?? 0;
+      count++;
+    }
+
+    // Termin VAT-7: 25 dnia miesiąca po którym rozliczamy.
+    final deadline = DateTime(now.year, now.month + 1, 25);
+    final deadlineLabel = _polishMonth(deadline.month);
+
+    final pillLabel = count == 0
+        ? 'brak nowych faktur'
+        : '$count ${_invoiceForm(count)} w tym miesiącu';
+
+    return HeroHeader(
+      overline: 'VAT do rozliczenia',
+      title: Formatters.formatCurrency(vatTotal),
+      caption: 'do 25 $deadlineLabel · termin VAT-7',
+      minHeight: 200,
+      pills: [
+        HeroPill(
+          icon: Icons.receipt_long_rounded,
+          label: pillLabel,
+        ),
+      ],
+    );
+  }
+
+  String _polishMonth(int month) {
+    const names = [
+      'stycznia', 'lutego', 'marca', 'kwietnia',
+      'maja', 'czerwca', 'lipca', 'sierpnia',
+      'września', 'października', 'listopada', 'grudnia',
+    ];
+    final idx = (month - 1).clamp(0, 11);
+    return names[idx];
+  }
+
+  String _invoiceForm(int n) {
+    if (n == 1) return 'faktura';
+    final mod10 = n % 10;
+    final mod100 = n % 100;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      return 'faktury';
+    }
+    return 'faktur';
   }
 }
 

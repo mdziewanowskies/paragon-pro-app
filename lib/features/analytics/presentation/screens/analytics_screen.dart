@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../../app/theme/category_style.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
+import '../../../../shared/widgets/stat_card.dart' as v3;
 import '../../../receipts/data/receipt_repository.dart';
 
 // Provider: full analytics data
@@ -28,6 +31,10 @@ final analyticsProvider =
   final Map<String, double> merchants = {};
   final Map<String, double> monthly = {};
   final Map<String, int> merchantCounts = {};
+  // Daily aggregation dla ostatnich 30 dni (klucz: ISO yyyy-MM-dd).
+  // Audyt: "Bar chart: 30 słupków (dzień miesiąca), nie 5".
+  final Map<String, double> daily = {};
+  final cutoff = DateTime.now().subtract(const Duration(days: 30));
 
   for (final r in receipts) {
     final amt = r.amount ?? 0;
@@ -44,8 +51,26 @@ final analyticsProvider =
       final key =
           '${r.purchaseDate!.year}-${r.purchaseDate!.month.toString().padLeft(2, '0')}';
       monthly[key] = (monthly[key] ?? 0) + amt;
+
+      if (r.purchaseDate!.isAfter(cutoff)) {
+        final d = r.purchaseDate!;
+        final dayKey =
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        daily[dayKey] = (daily[dayKey] ?? 0) + amt;
+      }
     }
   }
+
+  // Wypełniamy daily kluczami także dla dni bez paragonów — żeby wykres
+  // miał 30 słupków, a dni "puste" pokazywały się jako 0 zł.
+  for (int i = 0; i < 30; i++) {
+    final d = DateTime.now().subtract(Duration(days: 29 - i));
+    final k =
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    daily.putIfAbsent(k, () => 0);
+  }
+  final sortedDaily = daily.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
 
   // Unique months for average
   final monthCount = monthly.length.clamp(1, 999);
@@ -91,6 +116,7 @@ final analyticsProvider =
     categories: sortedCategories,
     categoriesTotal: categoriesTotal,
     monthly: sortedMonthly,
+    daily: sortedDaily,
     topMerchants: topMerchants.take(5).toList(),
     merchantCounts: merchantCounts,
   );
@@ -105,6 +131,9 @@ class _AnalyticsData {
   final List<MapEntry<String, double>> categories;
   final double categoriesTotal;
   final List<MapEntry<String, double>> monthly;
+  /// Wydatki per dzień dla ostatnich 30 dni (klucz: yyyy-MM-dd).
+  /// Audyt: bar chart "30 słupków (dzień miesiąca), nie 5 miesięcy".
+  final List<MapEntry<String, double>> daily;
   final List<MapEntry<String, double>> topMerchants;
   final Map<String, int> merchantCounts;
 
@@ -117,6 +146,7 @@ class _AnalyticsData {
     required this.categories,
     required this.categoriesTotal,
     required this.monthly,
+    required this.daily,
     required this.topMerchants,
     required this.merchantCounts,
   });
@@ -130,6 +160,7 @@ class _AnalyticsData {
         categories: [],
         categoriesTotal: 0,
         monthly: [],
+        daily: [],
         topMerchants: [],
         merchantCounts: {},
       );
@@ -162,16 +193,14 @@ class AnalyticsScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // 4 stat cards
+              _AnalyticsHero(data: data),
+              const SizedBox(height: 16),
               _StatCards(data: data),
               const SizedBox(height: 16),
-              // Pie chart
               _CategoryPieChart(data: data),
               const SizedBox(height: 16),
-              // Bar chart
-              _MonthlyBarChart(data: data),
+              _DailyBarChart(data: data),
               const SizedBox(height: 16),
-              // Top 5 merchants
               _TopMerchants(data: data),
               const SizedBox(height: 80),
             ],
@@ -182,7 +211,39 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 }
 
-// ─── 4 Stat Cards ────────────────────────────────────────────
+// ─── Hero header ────────────────────────────────────────────
+
+class _AnalyticsHero extends StatelessWidget {
+  final _AnalyticsData data;
+  const _AnalyticsHero({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final thisMonthKey =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final thisMonth = data.monthly
+        .firstWhere((e) => e.key == thisMonthKey,
+            orElse: () => const MapEntry('', 0))
+        .value;
+
+    return HeroHeader(
+      overline: 'Wydatki w tym miesiącu',
+      title: Formatters.formatCurrency(thisMonth),
+      caption:
+          'średnia miesięczna · ${Formatters.formatCurrency(data.monthlyAverage)}',
+      minHeight: 180,
+      pills: [
+        HeroPill(
+          icon: Icons.receipt_long_rounded,
+          label: '${data.receiptCount} paragonów łącznie',
+        ),
+      ],
+    );
+  }
+}
+
+// ─── 4 Stat Cards (V3 palette) ──────────────────────────────
 
 class _StatCards extends StatelessWidget {
   final _AnalyticsData data;
@@ -196,91 +257,36 @@ class _StatCards extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
-      childAspectRatio: 1.6,
+      childAspectRatio: 1.35,
       children: [
-        _StatCard(
+        v3.StatCard(
           icon: Icons.trending_up_rounded,
-          label: 'Łączne wydatki',
+          variant: v3.StatCardVariant.success,
           value: Formatters.formatCurrency(data.totalExpenses),
+          caption: 'łączne wydatki',
         ),
-        _StatCard(
+        v3.StatCard(
           icon: Icons.calendar_month_rounded,
-          label: 'Średnia miesięczna',
-          value: '${Formatters.formatCurrency(data.monthlyAverage)} / mies.',
+          variant: v3.StatCardVariant.info,
+          value: Formatters.formatCurrency(data.monthlyAverage),
+          caption: 'średnia miesięczna',
         ),
-        _StatCard(
+        v3.StatCard(
           icon: Icons.category_rounded,
-          label: 'Najdroższa kategoria',
+          variant: v3.StatCardVariant.gold,
           value: data.topCategory,
-          subtitle: Formatters.formatCurrency(data.topCategoryAmount),
+          caption: 'top kategoria',
+          delta: data.topCategoryAmount > 0
+              ? Formatters.formatCurrency(data.topCategoryAmount)
+              : null,
         ),
-        _StatCard(
+        v3.StatCard(
           icon: Icons.receipt_long_rounded,
-          label: 'Liczba paragonów',
+          variant: v3.StatCardVariant.highlight,
           value: '${data.receiptCount}',
+          caption: 'paragonów łącznie',
         ),
       ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final String? subtitle;
-
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: Colors.white70),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(label,
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.white70),
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (subtitle != null)
-            Text(subtitle!,
-                style: const TextStyle(fontSize: 11, color: Colors.white60)),
-        ],
-      ),
     );
   }
 }
@@ -423,19 +429,26 @@ class _CategoryPieChart extends StatelessWidget {
   }
 }
 
-// ─── Bar Chart (monthly) ────────────────────────────────────
+// ─── Bar Chart (last 30 days) ───────────────────────────────
 
-class _MonthlyBarChart extends StatelessWidget {
+/// V3 bar chart 30 dni. Audyt: "30 słupków (dzień miesiąca), nie 5.
+/// Wartość pod osią X tylko co 5 dni. Tooltip on tap z spring animation
+/// + haptic Light. Dominujący słupek = lighter green".
+class _DailyBarChart extends StatelessWidget {
   final _AnalyticsData data;
-  const _MonthlyBarChart({required this.data});
+  const _DailyBarChart({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    if (data.monthly.isEmpty) return const SizedBox.shrink();
+    if (data.daily.isEmpty) return const SizedBox.shrink();
 
-    final maxY = data.monthly
+    final maxY = data.daily
         .map((e) => e.value)
-        .reduce((a, b) => a > b ? a : b);
+        .fold<double>(0, (a, b) => a > b ? a : b);
+    final safeMaxY = maxY > 0 ? maxY * 1.15 : 100.0;
+    // Lighter green dla słupka dominującego (powyżej 90% maxY) — ten
+    // jeden wyróżnia się "spike day" (np. duży zakup).
+    final highlightThreshold = maxY * 0.9;
 
     return Card(
       child: Padding(
@@ -443,44 +456,54 @@ class _MonthlyBarChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Wydatki wg miesięcy',
+            const Text('Wydatki w ostatnich 30 dniach',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Tap na słupek = szczegóły dnia',
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 220,
+              height: 200,
               child: BarChart(
                 BarChartData(
-                  maxY: maxY * 1.15,
-                  barGroups: data.monthly.asMap().entries.map((e) {
+                  maxY: safeMaxY,
+                  barGroups: data.daily.asMap().entries.map((e) {
+                    final isHighlight =
+                        maxY > 0 && e.value.value >= highlightThreshold;
                     return BarChartGroupData(
                       x: e.key,
                       barRods: [
                         BarChartRodData(
                           toY: e.value.value,
-                          width: 22,
-                          color: Theme.of(context).colorScheme.primary,
+                          width: 6,
+                          color: isHighlight
+                              ? AppColors.primary400
+                              : AppColors.primary500
+                                  .withValues(alpha: 0.7),
                           borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(4),
-                            topRight: Radius.circular(4),
+                            topLeft: Radius.circular(2),
+                            topRight: Radius.circular(2),
                           ),
                         ),
                       ],
-                      showingTooltipIndicators: [0],
                     );
                   }).toList(),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 55,
+                        reservedSize: 50,
                         getTitlesWidget: (value, _) => Text(
                           Formatters.formatCurrencyShort(value),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: AppColors.textTertiary,
                           ),
                         ),
                       ),
@@ -488,27 +511,25 @@ class _MonthlyBarChart extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        // Etykieta co 5 dni — gęstsza siatka czytelniej
+                        // niż wszystkie 30 (audyt: "wartość pod osią X
+                        // tylko co 5 dni").
+                        interval: 5,
                         getTitlesWidget: (value, _) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= data.monthly.length) {
+                          if (idx < 0 || idx >= data.daily.length) {
                             return const SizedBox.shrink();
                           }
-                          final parts = data.monthly[idx].key.split('-');
-                          final months = [
-                            '', 'sty', 'lut', 'mar', 'kwi', 'maj', 'cze',
-                            'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'
-                          ];
-                          final m = int.tryParse(parts[1]) ?? 0;
+                          final parts = data.daily[idx].key.split('-');
+                          final day = int.tryParse(parts.last) ?? 0;
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              '${months[m]} ${parts[0].substring(2)}',
-                              style: TextStyle(
+                              '$day',
+                              style: const TextStyle(
                                 fontSize: 10,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
+                                color: AppColors.textTertiary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           );
@@ -526,21 +547,35 @@ class _MonthlyBarChart extends StatelessWidget {
                     drawVerticalLine: false,
                     horizontalInterval: maxY > 0 ? maxY / 4 : 100,
                     getDrawingHorizontalLine: (_) => FlLine(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.06),
+                      color: AppColors.surfaceDivider.withValues(alpha: 0.5),
                       strokeWidth: 1,
                     ),
                   ),
                   barTouchData: BarTouchData(
+                    enabled: true,
+                    touchCallback: (event, response) {
+                      // Light haptic tylko przy faktycznym tap'ie (nie
+                      // przy gesture continuous'ie).
+                      if (event is FlTapDownEvent &&
+                          response?.spot != null) {
+                        Haptics.tap();
+                      }
+                    },
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final entry = data.daily[group.x];
+                        final parts = entry.key.split('-');
+                        final day = int.tryParse(parts[2]) ?? 0;
+                        final month = int.tryParse(parts[1]) ?? 0;
+                        const months = [
+                          '', 'sty', 'lut', 'mar', 'kwi', 'maj', 'cze',
+                          'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'
+                        ];
                         return BarTooltipItem(
-                          Formatters.formatCurrency(rod.toY),
+                          '$day ${months[month]}\n${Formatters.formatCurrency(rod.toY)}',
                           const TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 11,
                           ),
                         );
