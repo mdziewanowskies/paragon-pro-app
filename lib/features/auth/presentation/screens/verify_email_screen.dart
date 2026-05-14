@@ -12,6 +12,7 @@ import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/auth_error_mapper.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../onboarding/first_login/first_login_splash.dart';
 
 /// Shown after a successful sign-up. Tells the user to confirm their
 /// email + offers Resend / Open mail / Change email actions. When the
@@ -40,12 +41,15 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     super.initState();
     // Auto-forward as soon as the user confirms the email and the
     // session shows up via deep-link callback.
-    _authSub = SupabaseService.auth.onAuthStateChange.listen((event) {
+    _authSub = SupabaseService.auth.onAuthStateChange.listen((event) async {
       if (!mounted) return;
       if (event.event == AuthChangeEvent.signedIn ||
           SupabaseService.auth.currentUser != null) {
         Haptics.success();
-        context.go('/profile-setup');
+        // Sprint 2: konfigurujemy splash dla nowego usera po email
+        // verify → session arrival.
+        await ref.read(firstLoginSplashProvider.notifier).trigger();
+        if (mounted) context.go('/profile-setup');
       }
     });
     // Tick once a second to refresh the resend cooldown countdown.

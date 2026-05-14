@@ -10,6 +10,7 @@ import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../onboarding/coachmark/coachmark_overlay.dart';
 import '../../../onboarding/coachmark/coachmark_target.dart';
 import '../../../onboarding/coachmark/tutorial_demo_data.dart';
+import '../../../onboarding/first_login/first_login_splash.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
@@ -194,11 +195,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (_currentTab != i) setState(() => _currentTab = i);
     };
     // Auto-start dla nowych userów po 600 ms — daje czas hero/stats
-    // wyrenderować się przed pokazaniem spotlight'u.
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // wyrenderować się przed pokazaniem spotlight'u. Czekamy aż
+    // FirstLoginSplash (jeśli aktywny) skończy swoją 3s animację,
+    // żeby tutorial nie startował "pod" overlayem konfiguracji.
+    void tryStart() {
       if (!mounted) return;
+      if (ref.read(firstLoginSplashProvider)) return;
       ctrl.start();
-    });
+    }
+
+    Future.delayed(const Duration(milliseconds: 600), tryStart);
   }
 
   Future<void> _checkProfile() async {
@@ -217,6 +223,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Po zakończeniu FirstLoginSplash'a (3s "Konfigurujemy...") —
+    // startujemy tutorial, jeśli jeszcze nie był pokazany.
+    ref.listen<bool>(firstLoginSplashProvider, (prev, next) {
+      if (prev == true && next == false) {
+        if (!mounted) return;
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (!mounted) return;
+          ref.read(coachmarkControllerProvider.notifier).start();
+        });
+      }
+    });
     return Scaffold(
       body: Stack(
         children: [

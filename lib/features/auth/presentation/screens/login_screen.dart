@@ -8,6 +8,7 @@ import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/profile_service.dart';
+import '../../../onboarding/first_login/first_login_splash.dart';
 import '../../../../core/utils/auth_error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
@@ -53,6 +54,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       Haptics.success();
       AnalyticsService.loginSuccess('email');
+      // Sprint 2: trigger "Konfigurujemy Twoją aplikację" splash dla
+      // pierwszego logowania. No-op jeśli flaga już zapisana.
+      await ref.read(firstLoginSplashProvider.notifier).trigger();
       await _navigatePostLogin();
     } catch (e, stackTrace) {
       _handleAuthError(e, stackTrace);

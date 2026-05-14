@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent;
 import '../../core/services/auth_service.dart';
 import '../../core/services/deep_link_service.dart';
 import '../../core/services/messaging_service.dart';
@@ -8,6 +9,7 @@ import '../../core/services/supabase_service.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
+import '../../features/onboarding/first_login/first_login_splash.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/profile/presentation/screens/profile_setup_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -25,8 +27,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   // so OAuth deep-link returns and email/pwd sign-in both navigate the
   // user out of /login automatically.
   final notifier = ValueNotifier<int>(0);
-  final sub = SupabaseService.auth.onAuthStateChange.listen((_) {
+  final sub = SupabaseService.auth.onAuthStateChange.listen((event) {
     notifier.value++;
+    // Sprint 2: konfigurujemy splash przy pierwszym sign-in (OAuth /
+    // deep-link) — no-op jeśli flaga już zapisana.
+    if (event.event == AuthChangeEvent.signedIn) {
+      ref.read(firstLoginSplashProvider.notifier).trigger();
+    }
   });
   ref.onDispose(() {
     sub.cancel();

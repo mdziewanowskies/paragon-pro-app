@@ -8,6 +8,7 @@ import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/utils/auth_error_mapper.dart';
+import '../../../onboarding/first_login/first_login_splash.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/google_sign_in_button.dart';
@@ -58,6 +59,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       Haptics.success();
       AnalyticsService.signupSuccess();
+      // Sprint 2: trigger "Konfigurujemy Twoją aplikację" — flaga
+      // odpali się przy faktycznym sign-in po weryfikacji emaila
+      // (lub natychmiast jeśli session od razu live).
+      await ref.read(firstLoginSplashProvider.notifier).trigger();
       if (mounted) {
         // Email confirmation is required before login. Hand the user
         // off to the verify screen rather than profile setup — it will
