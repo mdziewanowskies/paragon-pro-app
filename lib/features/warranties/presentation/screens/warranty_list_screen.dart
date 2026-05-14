@@ -12,6 +12,8 @@ import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/paragon_refresh_indicator.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/warranty_card.dart';
+import '../../../onboarding/coachmark/coachmark_controller.dart';
+import '../../../onboarding/coachmark/tutorial_demo_data.dart';
 
 class WarrantyModel {
   final String id;
@@ -63,6 +65,12 @@ class WarrantyModel {
 
 final warrantyListProvider =
     FutureProvider.autoDispose<List<WarrantyModel>>((ref) async {
+  // Tutorial demo data — pokazuje 3 gwarancje (aktywna długo,
+  // wkrótce wygasająca, archiwum) żeby user widział wszystkie 3
+  // zakładki nawet jak ma puste konto.
+  if (ref.watch(tutorialActiveProvider)) {
+    return TutorialDemoData.warranties();
+  }
   final userId = SupabaseService.auth.currentUser?.id;
   if (userId == null) return [];
 

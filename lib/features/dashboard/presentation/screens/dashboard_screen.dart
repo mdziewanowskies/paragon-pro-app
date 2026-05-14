@@ -9,6 +9,7 @@ import '../../../gamification/data/best_achievement_provider.dart';
 import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../onboarding/coachmark/coachmark_overlay.dart';
 import '../../../onboarding/coachmark/coachmark_target.dart';
+import '../../../onboarding/coachmark/tutorial_demo_data.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
@@ -31,6 +32,11 @@ import '../../../stores/presentation/screens/stores_screen.dart';
 // Dashboard data providers
 final dashboardStatsProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  // Tutorial demo — wiarygodne wartości żeby HomeHeroHeader pokazał
+  // realny streak/level/total nawet na pustym koncie.
+  if (ref.watch(tutorialActiveProvider)) {
+    return TutorialDemoData.dashboardStats();
+  }
   final userId = SupabaseService.auth.currentUser?.id;
   if (userId == null) return {};
 
@@ -123,6 +129,16 @@ final dashboardStatsProvider =
 
 final gamificationDataProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  // Tutorial — realistic level/streak/points żeby progress bar
+  // wyglądał wiarygodnie. Level 4, 1240 pkt, 7-day streak.
+  if (ref.watch(tutorialActiveProvider)) {
+    return {
+      'points': 1240,
+      'level': 4,
+      'streak_count': 7,
+      'total_receipts': 6,
+    };
+  }
   final userId = SupabaseService.auth.currentUser?.id;
   if (userId == null) return {};
 

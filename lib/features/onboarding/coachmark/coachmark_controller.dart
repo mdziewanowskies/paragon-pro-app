@@ -193,6 +193,13 @@ class CoachmarkController extends StateNotifier<CoachmarkState> {
     _applyStepTab();
   }
 
+  void previous() {
+    if (!state.active) return;
+    if (state.index == 0) return;
+    state = state.copyWith(index: state.index - 1);
+    _applyStepTab();
+  }
+
   void skip() => _finish();
 
   void _applyStepTab() {
@@ -215,3 +222,8 @@ final coachmarkControllerProvider =
     StateNotifierProvider<CoachmarkController, CoachmarkState>(
   (ref) => CoachmarkController(),
 );
+
+/// Convenience flag — czytaj w listach żeby przełączyć na demo data.
+final tutorialActiveProvider = Provider<bool>((ref) {
+  return ref.watch(coachmarkControllerProvider).active;
+});

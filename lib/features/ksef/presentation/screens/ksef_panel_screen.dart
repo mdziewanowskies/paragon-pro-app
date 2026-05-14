@@ -20,10 +20,17 @@ import '../widgets/ksef_invoice_table.dart';
 import '../widgets/vat_summary.dart';
 import '../../../receipts/data/receipt_repository.dart';
 import '../../../receipts/data/models/receipt_model.dart';
+import '../../../onboarding/coachmark/coachmark_controller.dart';
+import '../../../onboarding/coachmark/tutorial_demo_data.dart';
 import '../../data/ksef_repository.dart';
 
 final ksefInvoicesProvider =
     FutureProvider.autoDispose<List<ReceiptModel>>((ref) async {
+  // Tutorial mode — demo faktury KSeF żeby pokazać tabelę i kalkulator
+  // VAT, niezależnie czy user ma token i premium.
+  if (ref.watch(tutorialActiveProvider)) {
+    return TutorialDemoData.ksefInvoices();
+  }
   final userId = SupabaseService.auth.currentUser?.id;
   if (userId == null) return [];
   return await ref.read(receiptRepositoryProvider).getKsefInvoices(
@@ -140,8 +147,10 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
     // KSeF is Premium-only. Free + Family Lite users hit a soft
     // upsell screen instead of the panel — keeps the feature visible
     // in nav for the natural funnel without leaking access.
+    // Tutorial bypassuje paywall, żeby pokazać feature dla każdego.
+    final tutorialActive = ref.watch(tutorialActiveProvider);
     final sub = ref.watch(subscriptionProvider).valueOrNull;
-    if (sub != null && !sub.isPremium) {
+    if (!tutorialActive && sub != null && !sub.isPremium) {
       return const LockedFeatureView(
         icon: Icons.description_rounded,
         title: 'KSeF — Twój Asystent VAT',

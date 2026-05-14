@@ -70,6 +70,12 @@ class _CoachmarkOverlayState extends ConsumerState<CoachmarkOverlay>
           ctrl.next();
           _retriggerEnter();
         },
+        onPrevious: isFirst
+            ? null
+            : () {
+                ctrl.previous();
+                _retriggerEnter();
+              },
         onSkip: ctrl.skip,
       ),
     );
@@ -85,6 +91,7 @@ class _StepContent extends StatelessWidget {
   final Animation<double> pulse;
   final Animation<double> enter;
   final VoidCallback onNext;
+  final VoidCallback? onPrevious;
   final VoidCallback onSkip;
 
   const _StepContent({
@@ -97,6 +104,7 @@ class _StepContent extends StatelessWidget {
     required this.pulse,
     required this.enter,
     required this.onNext,
+    required this.onPrevious,
     required this.onSkip,
   });
 
@@ -112,6 +120,7 @@ class _StepContent extends StatelessWidget {
             stepIndex: stepIndex,
             totalSteps: totalSteps,
             onNext: onNext,
+            onPrevious: onPrevious,
             onSkip: onSkip,
           );
         }
@@ -122,6 +131,7 @@ class _StepContent extends StatelessWidget {
           pulse: pulse,
           enter: enter,
           onNext: onNext,
+          onPrevious: onPrevious,
           onSkip: onSkip,
         );
       },
@@ -136,6 +146,7 @@ class _SpotlightLayout extends ConsumerStatefulWidget {
   final Animation<double> pulse;
   final Animation<double> enter;
   final VoidCallback onNext;
+  final VoidCallback? onPrevious;
   final VoidCallback onSkip;
 
   const _SpotlightLayout({
@@ -145,6 +156,7 @@ class _SpotlightLayout extends ConsumerStatefulWidget {
     required this.pulse,
     required this.enter,
     required this.onNext,
+    required this.onPrevious,
     required this.onSkip,
   });
 
@@ -154,12 +166,35 @@ class _SpotlightLayout extends ConsumerStatefulWidget {
 
 class _SpotlightLayoutState extends ConsumerState<_SpotlightLayout> {
   int _retries = 0;
+  bool _scrolled = false;
 
   void _scheduleRetry() {
     if (_retries > 6) return;
     _retries++;
     Future.delayed(const Duration(milliseconds: 80), () {
       if (mounted) setState(() {});
+    });
+  }
+
+  /// Próba doscrollowania do targetu jeśli leży poza viewportem.
+  /// Wywoływane raz na step — gdy się zescrolluje, kolejne build'y
+  /// (po 320ms animacji + retry loop) złapią właściwy rect.
+  void _ensureVisible(GlobalKey key) {
+    if (_scrolled) return;
+    _scrolled = true;
+    final ctx = key.currentContext;
+    if (ctx == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+        alignment: 0.3,
+      );
+      // Po scrollu — odśwież layout overlay'a po krótkiej zwłoce.
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) setState(() {});
+      });
     });
   }
 
@@ -173,6 +208,13 @@ class _SpotlightLayoutState extends ConsumerState<_SpotlightLayout> {
     final rect = key?.globalRect();
     final hasTarget = rect != null;
     if (!hasTarget) _scheduleRetry();
+    if (hasTarget && key != null) {
+      // Auto-scroll jeśli target wystaje poza viewport (np. sekcja
+      // "Dodaj paragon" jest w dolnej części scrollable Home).
+      final outOfView = rect.top < padding.top + 80 ||
+          rect.bottom > size.height - 100;
+      if (outOfView) _ensureVisible(key);
+    }
 
     final inflated = hasTarget
         ? rect.inflate(8)
@@ -234,6 +276,7 @@ class _SpotlightLayoutState extends ConsumerState<_SpotlightLayout> {
                 stepIndex: widget.stepIndex,
                 totalSteps: widget.totalSteps,
                 onNext: widget.onNext,
+                onPrevious: widget.onPrevious,
                 onSkip: widget.onSkip,
                 isLast: widget.stepIndex == widget.totalSteps - 1,
               ),
@@ -252,6 +295,7 @@ class _IntroFullScreen extends StatelessWidget {
   final int stepIndex;
   final int totalSteps;
   final VoidCallback onNext;
+  final VoidCallback? onPrevious;
   final VoidCallback onSkip;
 
   const _IntroFullScreen({
@@ -261,6 +305,7 @@ class _IntroFullScreen extends StatelessWidget {
     required this.stepIndex,
     required this.totalSteps,
     required this.onNext,
+    required this.onPrevious,
     required this.onSkip,
   });
 
@@ -370,17 +415,36 @@ class _IntroFullScreen extends StatelessWidget {
                             child: Text(isLast ? 'Rozpocznij' : 'Pokaż mi!'),
                           ),
                         ),
-                        if (!isLast) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          TextButton(
-                            onPressed: onSkip,
-                            style: TextButton.styleFrom(
-                              foregroundColor:
-                                  Colors.white.withValues(alpha: 0.7),
-                            ),
-                            child: const Text('Pomiń tutorial'),
-                          ),
-                        ],
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (onPrevious != null) ...[
+                              TextButton.icon(
+                                onPressed: onPrevious,
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('Wstecz'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      Colors.white.withValues(alpha: 0.78),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                            ],
+                            if (!isLast)
+                              TextButton(
+                                onPressed: onSkip,
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      Colors.white.withValues(alpha: 0.7),
+                                ),
+                                child: const Text('Pomiń tutorial'),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -400,6 +464,7 @@ class _TooltipCard extends StatelessWidget {
   final int totalSteps;
   final bool isLast;
   final VoidCallback onNext;
+  final VoidCallback? onPrevious;
   final VoidCallback onSkip;
 
   const _TooltipCard({
@@ -408,6 +473,7 @@ class _TooltipCard extends StatelessWidget {
     required this.totalSteps,
     required this.isLast,
     required this.onNext,
+    required this.onPrevious,
     required this.onSkip,
   });
 
@@ -511,6 +577,19 @@ class _TooltipCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
+                if (onPrevious != null) ...[
+                  IconButton(
+                    onPressed: onPrevious,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: 'Wstecz',
+                    style: IconButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      backgroundColor:
+                          AppColors.textTertiary.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 Expanded(
                   child: TextButton(
                     onPressed: onSkip,

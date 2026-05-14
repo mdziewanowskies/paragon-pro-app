@@ -18,7 +18,9 @@ import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
 import '../../../../shared/widgets/paragon_refresh_indicator.dart';
 import '../widgets/receipt_card.dart';
+import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../onboarding/coachmark/coachmark_target.dart';
+import '../../../onboarding/coachmark/tutorial_demo_data.dart';
 import '../widgets/receipt_edit_dialog.dart';
 import '../widgets/receipt_preview_sheet.dart';
 import '../widgets/ksef_invoice_preview.dart';
@@ -112,6 +114,14 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   }
 
   Future<void> _loadCounts() async {
+    if (ref.read(tutorialActiveProvider)) {
+      setState(() => _counts = {
+            ReceiptFilterType.all: 9,
+            ReceiptFilterType.receiptsOnly: 6,
+            ReceiptFilterType.ksefOnly: 3,
+          });
+      return;
+    }
     try {
       final userId = SupabaseService.auth.currentUser!.id;
       final counts = await ref.read(receiptRepositoryProvider).getCounts(
@@ -123,6 +133,17 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
   }
 
   Future<void> _loadReceipts() async {
+    // Tutorial mode — pokazujemy demo data zamiast prawdziwych
+    // paragonów, żeby user widział pełną kartę listy + gesty.
+    if (ref.read(tutorialActiveProvider)) {
+      setState(() {
+        _receipts = TutorialDemoData.receipts();
+        _isLoading = false;
+        _hasMore = false;
+        _offset = _receipts.length;
+      });
+      return;
+    }
     setState(() {
       _isLoading = true;
       _offset = 0;
@@ -286,6 +307,15 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
         _loadCounts();
       });
     }
+    // Reload listy gdy tutorial start/stop — żeby przełączyć między
+    // demo a prawdziwymi danymi w runtime.
+    ref.listen<bool>(tutorialActiveProvider, (prev, next) {
+      if (prev != next) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadReceipts();
+        });
+      }
+    });
 
     return ParagonRefreshIndicator(
       onRefresh: () async {
