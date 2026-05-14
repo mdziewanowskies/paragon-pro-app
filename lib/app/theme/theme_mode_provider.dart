@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// V3 motyw aplikacji — `system` (śledzi OS), `light` lub `dark`.
 /// Persystowane w SharedPreferences pod `app.theme_mode`. Domyślny
-/// tryb: `system` żeby Apple/Google reviewerzy widzieli zgodność
-/// z OS preference.
+/// tryb dla nowego usera: `dark` (premium feel). Jeśli user manualnie
+/// zmieni motyw — to zapisuje się i odtąd respektujemy jego wybór.
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system) {
+  ThemeModeNotifier() : super(ThemeMode.dark) {
     _load();
   }
 
@@ -17,11 +17,16 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_prefsKey);
-      if (raw == null) return;
+      if (raw == null) {
+        // Nowy user — utrwalamy dark żeby kolejny start nie patrzył
+        // w "nie ustawione" i nie przeskoczył na inny default.
+        await prefs.setString(_prefsKey, 'dark');
+        return;
+      }
       state = _decode(raw);
     } catch (_) {
       // Jeśli SharedPreferences nie wstaje (rare iOS edge case na
-      // pierwszym uruchomieniu) — zostajemy z system default.
+      // pierwszym uruchomieniu) — zostajemy z dark default.
     }
   }
 

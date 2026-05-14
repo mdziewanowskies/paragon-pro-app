@@ -6,6 +6,9 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
+import '../../../onboarding/coachmark/coachmark_controller.dart';
+import '../../../onboarding/coachmark/coachmark_overlay.dart';
+import '../../../onboarding/coachmark/coachmark_target.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/app_logo.dart';
@@ -161,7 +164,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkProfile());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkProfile();
+      _wireTutorial();
+    });
+  }
+
+  void _wireTutorial() {
+    if (!mounted) return;
+    final ctrl = ref.read(coachmarkControllerProvider.notifier);
+    ctrl.onChangeTab = (i) {
+      if (!mounted) return;
+      if (_currentTab != i) setState(() => _currentTab = i);
+    };
+    // Auto-start dla nowych userów po 600 ms — daje czas hero/stats
+    // wyrenderować się przed pokazaniem spotlight'u.
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      ctrl.start();
+    });
   }
 
   Future<void> _checkProfile() async {
@@ -181,60 +202,113 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: child,
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+              child: IndexedStack(
+                key: ValueKey(_currentTab),
+                index: _currentTab,
+                children: [
+                  _HomeTab(),
+                  const ReceiptListScreen(),
+                  const KsefPanelScreen(),
+                  const WarrantyListScreen(),
+                  _MoreTab(items: _moreItems),
+                ],
+              ),
+            ),
           ),
-          child: IndexedStack(
-            key: ValueKey(_currentTab),
-            index: _currentTab,
-            children: [
-              _HomeTab(),
-              const ReceiptListScreen(),
-              const KsefPanelScreen(),
-              const WarrantyListScreen(),
-              _MoreTab(items: _moreItems),
+          const CoachmarkOverlay(),
+        ],
+      ),
+      bottomNavigationBar: Stack(
+        children: [
+          NavigationBar(
+            selectedIndex: _currentTab,
+            onDestinationSelected: (i) {
+              if (i != _currentTab) Haptics.selection();
+              setState(() => _currentTab = i);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long_rounded),
+                label: 'Paragony',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.description_outlined),
+                selectedIcon: Icon(Icons.description_rounded),
+                label: 'KSeF',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.shield_outlined),
+                selectedIcon: Icon(Icons.shield_rounded),
+                label: 'Gwarancje',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.more_horiz_rounded),
+                selectedIcon: Icon(Icons.more_horiz_rounded),
+                label: 'Więcej',
+              ),
             ],
           ),
-        ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentTab,
-        onDestinationSelected: (i) {
-          if (i != _currentTab) Haptics.selection();
-          setState(() => _currentTab = i);
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'Paragony',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description_rounded),
-            label: 'KSeF',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shield_outlined),
-            selectedIcon: Icon(Icons.shield_rounded),
-            label: 'Gwarancje',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.more_horiz_rounded),
-            selectedIcon: Icon(Icons.more_horiz_rounded),
-            label: 'Więcej',
+          // Niewidoczne CoachmarkTarget'y nałożone na NavigationBar —
+          // 5 równych kolumn 72 px wysokości, dokładnie pokrywają
+          // NavigationDestination'y. Brak hitboxu (IgnorePointer) —
+          // nie zabieramy tapów oryginalnej nawigacji.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: SizedBox(
+                height: 72,
+                child: Row(
+                  children: const [
+                    Expanded(child: SizedBox.expand()),
+                    Expanded(
+                      child: CoachmarkTarget(
+                        stepId: 'tab_receipts',
+                        padding: 4,
+                        child: SizedBox.expand(),
+                      ),
+                    ),
+                    Expanded(
+                      child: CoachmarkTarget(
+                        stepId: 'tab_ksef',
+                        padding: 4,
+                        child: SizedBox.expand(),
+                      ),
+                    ),
+                    Expanded(
+                      child: CoachmarkTarget(
+                        stepId: 'tab_warranties',
+                        padding: 4,
+                        child: SizedBox.expand(),
+                      ),
+                    ),
+                    Expanded(
+                      child: CoachmarkTarget(
+                        stepId: 'tab_more',
+                        padding: 4,
+                        child: SizedBox.expand(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -260,7 +334,10 @@ class _HomeTab extends ConsumerWidget {
           backgroundColor: AppColors.darkBackground,
           title: const AppLogoWithText(logoSize: 32, fontSize: 18),
           actions: [
-            const NotificationBell(),
+            const CoachmarkTarget(
+              stepId: 'notification_bell',
+              child: NotificationBell(),
+            ),
             IconButton(
               icon: const Icon(Icons.person_rounded),
               onPressed: () => context.go('/profile'),
@@ -371,11 +448,15 @@ class _HomeTab extends ConsumerWidget {
                   },
                 ),
                 const SizedBox(height: 16),
-                ReceiptUpload(
-                  onUploaded: () {
-                    ref.invalidate(dashboardStatsProvider);
-                    ref.invalidate(gamificationDataProvider);
-                  },
+                CoachmarkTarget(
+                  stepId: 'add_receipt',
+                  padding: 8,
+                  child: ReceiptUpload(
+                    onUploaded: () {
+                      ref.invalidate(dashboardStatsProvider);
+                      ref.invalidate(gamificationDataProvider);
+                    },
+                  ),
                 ),
                 const SizedBox(height: 20),
 

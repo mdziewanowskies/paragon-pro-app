@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../app/theme/theme_mode_provider.dart';
+import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -90,6 +91,18 @@ class SettingsScreen extends ConsumerWidget {
           const _SectionLabel('Pomoc'),
           const SizedBox(height: AppSpacing.sm),
           _Section([
+            _SettingTile(
+              icon: Icons.school_rounded,
+              iconColor: AppColors.accentAqua,
+              label: 'Tutorial',
+              trailingText: 'Pokaż ponownie',
+              onTap: () {
+                ref
+                    .read(coachmarkControllerProvider.notifier)
+                    .forceStart();
+                context.go('/');
+              },
+            ),
             _SettingTile(
               icon: Icons.privacy_tip_outlined,
               iconColor: c.textSecondary,

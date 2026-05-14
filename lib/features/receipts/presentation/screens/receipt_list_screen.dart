@@ -18,6 +18,7 @@ import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
 import '../../../../shared/widgets/paragon_refresh_indicator.dart';
 import '../widgets/receipt_card.dart';
+import '../../../onboarding/coachmark/coachmark_target.dart';
 import '../widgets/receipt_edit_dialog.dart';
 import '../widgets/receipt_preview_sheet.dart';
 import '../widgets/ksef_invoice_preview.dart';
@@ -791,7 +792,7 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                       );
                     }
 
-                    return Padding(
+                    final cardWidget = Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Slidable(
                         key: ValueKey(receipt.id),
@@ -844,6 +845,18 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                         ),
                       ),
                     );
+                    // Pierwsza karta na liście — anchor dla tutorialu
+                    // (krok 'receipt_gestures'). Reszta kart bez wrap'a.
+                    if (index == 0) {
+                      return CoachmarkTarget(
+                        stepId: 'receipt_gestures',
+                        padding: 4,
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.md),
+                        child: cardWidget,
+                      );
+                    }
+                    return cardWidget;
                   },
                   childCount: _receipts.length + (_hasMore ? 1 : 0),
                 ),
