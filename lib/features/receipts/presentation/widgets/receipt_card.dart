@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../app/theme/category_style.dart';
 import '../../../../core/utils/formatters.dart';
@@ -48,7 +49,7 @@ class ReceiptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final visual = CategoryStyle.of(receipt.category);
     final isInvoice = receipt.isKsefInvoice;
-    final theme = Theme.of(context);
+    final c = context.colors;
 
     return Material(
       color: Colors.transparent,
@@ -59,7 +60,7 @@ class ReceiptCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppColors.surface1,
+            color: c.surface1,
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: selected
                 ? Border.all(color: AppColors.primary500, width: 2)
@@ -92,10 +93,10 @@ class ReceiptCard extends StatelessWidget {
                       _formatMerchant(receipt.merchantName),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                         height: 1.2,
                       ),
                     ),
@@ -107,9 +108,9 @@ class ReceiptCard extends StatelessWidget {
                             _metaLine(receipt, visual),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: c.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -157,7 +158,7 @@ class ReceiptCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       letterSpacing: -0.3,
                       height: 1.1,
                     ),
@@ -166,9 +167,9 @@ class ReceiptCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'VAT ${Formatters.formatCurrency(receipt.vatAmount)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: AppColors.textTertiary,
+                        color: c.textTertiary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -180,7 +181,7 @@ class ReceiptCard extends StatelessWidget {
                 Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: c.textTertiary,
                 ),
             ],
           ),

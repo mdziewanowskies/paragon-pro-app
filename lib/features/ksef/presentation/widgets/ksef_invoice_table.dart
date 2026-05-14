@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../receipts/data/models/receipt_model.dart';
@@ -58,6 +59,7 @@ class _InvoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
@@ -66,7 +68,7 @@ class _InvoiceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppColors.surface1,
+            color: c.surface1,
             borderRadius: BorderRadius.circular(AppRadius.md),
             boxShadow: AppShadows.md,
           ),
@@ -113,10 +115,10 @@ class _InvoiceCard extends StatelessWidget {
                                       invoice.merchantName ?? '—',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
+                                        color: c.textPrimary,
                                         height: 1.2,
                                       ),
                                     ),
@@ -125,9 +127,9 @@ class _InvoiceCard extends StatelessWidget {
                                       _captionLine(invoice),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
-                                        color: AppColors.textSecondary,
+                                        color: c.textSecondary,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -142,10 +144,10 @@ class _InvoiceCard extends StatelessWidget {
                                   Text(
                                     Formatters.formatCurrency(
                                         invoice.grossAmount),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.textPrimary,
+                                      color: c.textPrimary,
                                       letterSpacing: -0.5,
                                       height: 1.1,
                                     ),
@@ -171,7 +173,7 @@ class _InvoiceCard extends StatelessWidget {
                             const SizedBox(height: AppSpacing.md),
                             Container(
                               height: 1,
-                              color: AppColors.surfaceDivider,
+                              color: c.surfaceDivider,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             Row(
@@ -276,8 +278,8 @@ class _StatusPill extends StatelessWidget {
         ),
       _InvoiceStatus.issued => (
           'wystawiona',
-          AppColors.surface2,
-          AppColors.textSecondary,
+          context.colors.surface2,
+          context.colors.textSecondary,
         ),
     };
     return Container(
@@ -306,25 +308,26 @@ class _AmountChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
-            color: AppColors.textTertiary,
+            color: c.textTertiary,
             fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           Formatters.formatCurrency(value),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: c.textPrimary,
           ),
         ),
       ],

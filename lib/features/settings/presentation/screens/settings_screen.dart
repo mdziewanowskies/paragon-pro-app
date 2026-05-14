@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../app/theme/theme_mode_provider.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 
 /// V3 ustawienia. Audyt: "Sekcje: 'Konto' (avatar + email + Zarządzaj
@@ -63,19 +65,9 @@ class SettingsScreen extends ConsumerWidget {
                 );
               },
             ),
-            _SettingTile(
-              icon: Icons.dark_mode_rounded,
-              iconColor: AppColors.accentViolet,
-              label: 'Motyw',
-              trailingText: 'Ciemny',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Jasny motyw — wkrótce w nowej aktualizacji'),
-                  ),
-                );
-              },
+            _ThemeModeTile(
+              currentMode: ref.watch(themeModeProvider),
+              onTap: () => _showThemeSheet(context, ref),
             ),
             _SettingTile(
               icon: Icons.notifications_active_rounded,
@@ -444,6 +436,217 @@ class _DangerTile extends StatelessWidget {
                 size: 18,
                 color: AppColors.danger500,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showThemeSheet(BuildContext context, WidgetRef ref) {
+  final current = ref.read(themeModeProvider);
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (sheetCtx) => Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface0,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(AppRadius.lg),
+          topRight: Radius.circular(AppRadius.lg),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                ),
+              ),
+              const Text(
+                'Motyw aplikacji',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Wybierz tryb wyświetlania albo śledź ustawienia systemu',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _ThemeOption(
+                icon: Icons.phone_iphone_rounded,
+                label: 'Według systemu',
+                description: 'Śledzi ustawienia iOS / Android',
+                selected: current == ThemeMode.system,
+                onTap: () {
+                  Haptics.selection();
+                  ref.read(themeModeProvider.notifier).set(ThemeMode.system);
+                  Navigator.pop(sheetCtx);
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ThemeOption(
+                icon: Icons.light_mode_rounded,
+                label: 'Jasny',
+                description: 'Biały dashboard, czarne teksty',
+                selected: current == ThemeMode.light,
+                onTap: () {
+                  Haptics.selection();
+                  ref.read(themeModeProvider.notifier).set(ThemeMode.light);
+                  Navigator.pop(sheetCtx);
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ThemeOption(
+                icon: Icons.dark_mode_rounded,
+                label: 'Ciemny',
+                description: 'Niski kontrast, idealny wieczorem',
+                selected: current == ThemeMode.dark,
+                onTap: () {
+                  Haptics.selection();
+                  ref.read(themeModeProvider.notifier).set(ThemeMode.dark);
+                  Navigator.pop(sheetCtx);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _ThemeModeTile extends StatelessWidget {
+  final ThemeMode currentMode;
+  final VoidCallback onTap;
+  const _ThemeModeTile({required this.currentMode, required this.onTap});
+
+  String get _label => switch (currentMode) {
+        ThemeMode.system => 'Według systemu',
+        ThemeMode.light => 'Jasny',
+        ThemeMode.dark => 'Ciemny',
+      };
+
+  IconData get _icon => switch (currentMode) {
+        ThemeMode.system => Icons.phone_iphone_rounded,
+        ThemeMode.light => Icons.light_mode_rounded,
+        ThemeMode.dark => Icons.dark_mode_rounded,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingTile(
+      icon: _icon,
+      iconColor: AppColors.accentViolet,
+      label: 'Motyw',
+      trailingText: _label,
+      onTap: onTap,
+    );
+  }
+}
+
+class _ThemeOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeOption({
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primary500.withValues(alpha: 0.12)
+                : AppColors.surface1,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: selected
+                  ? AppColors.primary500
+                  : AppColors.surfaceDivider,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 22,
+                color: selected
+                    ? AppColors.primary400
+                    : AppColors.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  size: 20,
+                  color: AppColors.primary400,
+                ),
             ],
           ),
         ),

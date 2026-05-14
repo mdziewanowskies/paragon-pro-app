@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/notifications/data/realtime_listeners.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_mode_provider.dart';
 
 class ParagonProApp extends ConsumerWidget {
   const ParagonProApp({super.key});
@@ -11,6 +12,7 @@ class ParagonProApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
     // Boot Supabase Realtime channels for notifications + family
     // membership. Replaces 30s/60s polling — `notificationsProvider`
     // and `subscriptionProvider` get invalidated as rows change.
@@ -19,8 +21,9 @@ class ParagonProApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'ParagonPro',
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      themeMode: themeMode,
       routerConfig: router,
       locale: const Locale('pl', 'PL'),
       scrollBehavior: const _AppScrollBehavior(),
