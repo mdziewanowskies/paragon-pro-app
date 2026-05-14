@@ -14,6 +14,7 @@ import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/warranty_card.dart';
 import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../onboarding/coachmark/tutorial_demo_data.dart';
+import '../../../../shared/widgets/motion.dart';
 
 class WarrantyModel {
   final String id;
@@ -171,7 +172,10 @@ class _WarrantyListScreenState extends ConsumerState<WarrantyListScreen> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final w = filtered[index];
-                        return Padding(
+                        return StaggeredFadeIn(
+                          key: ValueKey('warranty-fade-${w.id}'),
+                          index: index,
+                          child: Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Slidable(
                             key: ValueKey(w.id),
@@ -195,6 +199,7 @@ class _WarrantyListScreenState extends ConsumerState<WarrantyListScreen> {
                               ],
                             ),
                             child: WarrantyCard(warranty: w),
+                          ),
                           ),
                         );
                       },

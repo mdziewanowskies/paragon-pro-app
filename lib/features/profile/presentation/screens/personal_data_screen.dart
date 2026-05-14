@@ -6,6 +6,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../shared/widgets/action_success_flash.dart';
 import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
 
@@ -80,9 +81,7 @@ class _PersonalDataScreenState extends ConsumerState<PersonalDataScreen> {
         'bank_account_number': _bankAccountController.text.trim(),
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil zaktualizowany!')),
-        );
+        ActionSuccessFlash.show(context, 'Zapisano!');
       }
     } catch (e) {
       if (mounted) {

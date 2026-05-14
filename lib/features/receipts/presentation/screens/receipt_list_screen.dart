@@ -21,6 +21,7 @@ import '../widgets/receipt_card.dart';
 import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../onboarding/coachmark/coachmark_target.dart';
 import '../../../onboarding/coachmark/tutorial_demo_data.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../widgets/receipt_edit_dialog.dart';
 import '../widgets/receipt_preview_sheet.dart';
 import '../widgets/ksef_invoice_preview.dart';
@@ -324,14 +325,16 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       }
     });
 
-    return ParagonRefreshIndicator(
-      onRefresh: () async {
-        await _loadReceipts();
-        await _loadCounts();
-      },
-      child: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
+    return Stack(
+      children: [
+        ParagonRefreshIndicator(
+          onRefresh: () async {
+            await _loadReceipts();
+            await _loadCounts();
+          },
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
           // Select mode bar
           if (_selectMode)
             SliverToBoxAdapter(
@@ -884,23 +887,31 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                     );
                     // Pierwsza karta na liście — anchor dla tutorialu
                     // (krok 'receipt_gestures'). Reszta kart bez wrap'a.
+                    final animated = StaggeredFadeIn(
+                      key: ValueKey('rcpt-fade-${receipt.id}'),
+                      index: index,
+                      child: cardWidget,
+                    );
                     if (index == 0) {
                       return CoachmarkTarget(
                         stepId: 'receipt_gestures',
                         padding: 4,
                         borderRadius:
                             BorderRadius.circular(AppRadius.md),
-                        child: cardWidget,
+                        child: animated,
                       );
                     }
-                    return cardWidget;
+                    return animated;
                   },
                   childCount: _receipts.length + (_hasMore ? 1 : 0),
                 ),
               ),
             ),
-        ],
-      ),
+            ],
+          ),
+        ),
+        ScrollToTopFab(controller: _scrollController),
+      ],
     );
   }
 

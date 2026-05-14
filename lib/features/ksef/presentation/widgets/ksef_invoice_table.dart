@@ -4,6 +4,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../receipts/data/models/receipt_model.dart';
+import '../../../../shared/widgets/motion.dart';
 
 /// V3 lista faktur KSeF. Audyt: "faktura przestaje wyglądać jak rekord
 /// bazy a zaczyna jak karta przelewu w bankowości mobilnej".
@@ -29,20 +30,26 @@ class KsefInvoiceTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (final inv in invoices) ...[
-          _InvoiceCard(
+    final items = <Widget>[];
+    for (int i = 0; i < invoices.length; i++) {
+      final inv = invoices[i];
+      items.add(
+        StaggeredFadeIn(
+          key: ValueKey('ksef-fade-${inv.id}'),
+          index: i,
+          child: _InvoiceCard(
             invoice: inv,
             onTap: onOpen == null ? null : () => onOpen!(inv),
-            onDownloadXml: onDownloadXml != null && inv.ksefNumber != null
-                ? () => onDownloadXml!(inv.ksefNumber!)
-                : null,
+            onDownloadXml:
+                onDownloadXml != null && inv.ksefNumber != null
+                    ? () => onDownloadXml!(inv.ksefNumber!)
+                    : null,
           ),
-          const SizedBox(height: 10),
-        ],
-      ],
-    );
+        ),
+      );
+      items.add(const SizedBox(height: 10));
+    }
+    return Column(children: items);
   }
 }
 
