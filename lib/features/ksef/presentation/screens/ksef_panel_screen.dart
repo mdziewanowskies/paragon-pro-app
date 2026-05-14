@@ -6,7 +6,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/share_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/services/haptics.dart';
 import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/utils/cupertino_date_picker.dart';
@@ -14,6 +13,7 @@ import '../../../../core/services/profile_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/locked_feature_view.dart';
+import '../../../../shared/widgets/paragon_refresh_indicator.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/ksef_settings.dart';
 import '../widgets/ksef_invoice_table.dart';
@@ -164,13 +164,11 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
     final hasKsefToken = profile.value?.ksefToken != null &&
         profile.value!.ksefToken!.isNotEmpty;
 
-    return RefreshIndicator(
+    return ParagonRefreshIndicator(
       onRefresh: () async {
-            Haptics.medium();
-            ref.invalidate(ksefInvoicesProvider);
-            await Future<void>.delayed(const Duration(milliseconds: 350));
-            Haptics.success();
-          },
+        ref.invalidate(ksefInvoicesProvider);
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),

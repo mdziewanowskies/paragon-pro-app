@@ -19,6 +19,7 @@ class ReceiptCard extends StatelessWidget {
   final ReceiptModel receipt;
   final String? currentUserId;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   /// Włącza "tryb wyboru" — bez chevrona, z subtelnym borderem
   /// gdy zaznaczony. Używane na liście paragonów w bulk delete.
@@ -33,6 +34,7 @@ class ReceiptCard extends StatelessWidget {
     required this.receipt,
     this.currentUserId,
     this.onTap,
+    this.onLongPress,
     this.selected = false,
     this.gamificationHint,
   });
@@ -53,6 +55,7 @@ class ReceiptCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Ink(
           decoration: BoxDecoration(

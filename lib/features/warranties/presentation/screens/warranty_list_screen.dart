@@ -8,6 +8,7 @@ import '../../../../core/services/haptics.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hero_header.dart';
+import '../../../../shared/widgets/paragon_refresh_indicator.dart';
 import '../../../../shared/widgets/skeletons.dart';
 import '../widgets/warranty_card.dart';
 
@@ -104,12 +105,10 @@ class _WarrantyListScreenState extends ConsumerState<WarrantyListScreen> {
           _WarrantyTab.archive => archived,
         };
 
-        return RefreshIndicator(
+        return ParagonRefreshIndicator(
           onRefresh: () async {
-            Haptics.medium();
             ref.invalidate(warrantyListProvider);
             await Future<void>.delayed(const Duration(milliseconds: 350));
-            Haptics.success();
           },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

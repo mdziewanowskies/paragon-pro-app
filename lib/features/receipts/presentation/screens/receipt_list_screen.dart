@@ -15,8 +15,10 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../data/models/receipt_model.dart';
 import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
+import '../../../../shared/widgets/paragon_refresh_indicator.dart';
 import '../widgets/receipt_card.dart';
 import '../widgets/receipt_edit_dialog.dart';
+import '../widgets/receipt_preview_sheet.dart';
 import '../widgets/ksef_invoice_preview.dart';
 import '../../../warranties/presentation/widgets/warranty_dialog.dart';
 import '../../../complaints/presentation/widgets/complaint_letter_dialog.dart';
@@ -282,12 +284,10 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
       });
     }
 
-    return RefreshIndicator(
+    return ParagonRefreshIndicator(
       onRefresh: () async {
-        Haptics.medium();
         await _loadReceipts();
         await _loadCounts();
-        Haptics.success();
       },
       child: CustomScrollView(
         controller: _scrollController,
@@ -837,6 +837,8 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
                           currentUserId:
                               SupabaseService.auth.currentUser?.id,
                           onTap: () => _showImagePreview(receipt),
+                          onLongPress: () =>
+                              _showPreviewSheet(receipt),
                         ),
                       ),
                     );
@@ -893,6 +895,23 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
     showDialog(
       context: context,
       builder: (context) => _ReceiptPreviewDialog(receipt: receipt),
+    );
+  }
+
+  /// V3 long-press "peek & pop" sheet. Pokazuje miniaturę zdjęcia,
+  /// hero z meta-info i 4 akcje (edit / gwarancja / reklamacja / usuń).
+  /// Audyt rekomendacja 2.1: "Long-press na karcie = preview sheet".
+  void _showPreviewSheet(ReceiptModel receipt) {
+    ReceiptPreviewSheet.show(
+      context,
+      receipt: receipt,
+      onEdit: () => _showEditDialog(receipt),
+      onAddWarranty: () => _showWarrantyDialog(receipt),
+      onComplaint: () => _showComplaintDialog(receipt),
+      onDelete: () async {
+        final ok = await _confirmDelete(receipt);
+        if (ok == true) _deleteReceipt(receipt);
+      },
     );
   }
 }
@@ -952,14 +971,23 @@ class _ReceiptPreviewDialogState extends State<_ReceiptPreviewDialog> {
       child: Stack(
         children: [
           Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: Image.file(
-                  File(_localPath!),
-                  fit: BoxFit.contain,
+            // Hero animation paruje miniaturę w ReceiptPreviewSheet
+            // (long-press) z full-screenowym widokiem zdjęcia w
+            // ReceiptPreviewDialog. Audit Sprint 3 motion checklist
+            // pozycja 1: "MatchedGeometry: ikona kategorii + nazwa
+            // sklepu lecą z pozycji w liście do pozycji w hero
+            // szczegółu" — Flutter equivalent to `Hero`.
+            child: Hero(
+              tag: 'receipt-image-${receipt.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.file(
+                    File(_localPath!),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
