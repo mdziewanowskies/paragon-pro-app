@@ -16,6 +16,8 @@ import '../../../../core/services/subscription_service.dart';
 import '../../../../core/services/offline_sync_service.dart';
 import '../../data/receipt_repository.dart';
 import '../screens/receipt_list_screen.dart';
+import '../../../onboarding/coachmark/coachmark_controller.dart';
+import '../../../onboarding/first_receipt/first_receipt_celebration.dart';
 
 class ReceiptUpload extends ConsumerStatefulWidget {
   final VoidCallback? onUploaded;
@@ -229,6 +231,20 @@ class _ReceiptUploadState extends ConsumerState<ReceiptUpload> {
         // Schedule daily streak reminder at 20:00
         NotificationService.scheduleDailyStreakReminder(
             hour: 9, minute: 0);
+
+        // Sprint 3: celebracja pierwszego paragonu — confetti + dialog
+        // + redirect na tab Paragony. Skip podczas tutorialu (demo data
+        // nie powinno triggerować first-receipt milestone'a).
+        final inTutorial = ref.read(tutorialActiveProvider);
+        if (!inTutorial && context.mounted) {
+          // Małe opóźnienie żeby snackbar success się zdążył pokazać
+          // i Home odświeżył statystyki przed pełnoekranowym dialogiem.
+          Future.delayed(const Duration(milliseconds: 700), () {
+            if (context.mounted) {
+              FirstReceiptCelebrationDialog.maybeShow(context);
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
