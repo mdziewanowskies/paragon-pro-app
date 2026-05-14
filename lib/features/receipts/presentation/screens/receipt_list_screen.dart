@@ -17,6 +17,7 @@ import '../../data/models/receipt_model.dart';
 import '../../data/receipt_repository.dart';
 import '../widgets/advanced_filters.dart';
 import '../../../../shared/widgets/paragon_refresh_indicator.dart';
+import '../widgets/add_receipt_fab.dart';
 import '../widgets/receipt_card.dart';
 import '../../../onboarding/coachmark/coachmark_controller.dart';
 import '../../../onboarding/coachmark/coachmark_target.dart';
@@ -910,7 +911,11 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             ],
           ),
         ),
-        ScrollToTopFab(controller: _scrollController),
+        ScrollToTopFab(
+          controller: _scrollController,
+          margin: const EdgeInsets.only(bottom: 80, right: 16),
+        ),
+        if (!_selectMode) const AddReceiptFab(),
       ],
     );
   }
