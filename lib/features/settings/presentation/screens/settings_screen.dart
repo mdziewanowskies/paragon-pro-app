@@ -273,7 +273,10 @@ class _SectionLabel extends StatelessWidget {
 /// Grupowana sekcja ustawień (iOS-style). Pojedyncze ListTile z
 /// dividerami zamiast osobnych kart — czytelniej i bardziej kompaktowo.
 class _Section extends StatelessWidget {
-  final List<_SettingTile> children;
+  /// Lista wpisów sekcji — luźno typowana `Widget` żeby zmieścić zarówno
+  /// `_SettingTile` jak i specjalizowane warianty (`_ThemeModeTile`,
+  /// itp.) bez kombinowania z bazową klasą.
+  final List<Widget> children;
   const _Section(this.children);
 
   @override
