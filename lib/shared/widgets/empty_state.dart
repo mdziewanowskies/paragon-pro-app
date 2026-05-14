@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// Empty state z pulsującą ikoną, tytułem, opcjonalnym subtitle + hint
+/// + CTA. Audyt: "ilustracja zwiniętej tarczy + tekst 'Tu pojawią się
+/// Twoje gwarancje — żadnej nie zapomnisz'. Lekki, miękki,
+/// gimme-a-reason-to-come-back". Ilustracje custom Lottie nadal TODO —
+/// na razie używamy Material ikony w kolorowym kółku.
 class EmptyState extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -7,6 +12,11 @@ class EmptyState extends StatefulWidget {
   final String? hint;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// Opcjonalny kolor akcentu (tło kółka + ikona + hint). Pozwala
+  /// ekranom mieć semantyczny ton (gwarancje = warning, KSeF = aqua,
+  /// achievements = gold). Null = primary z theme'u.
+  final Color? accentColor;
 
   const EmptyState({
     super.key,
@@ -16,6 +26,7 @@ class EmptyState extends StatefulWidget {
     this.hint,
     this.actionLabel,
     this.onAction,
+    this.accentColor,
   });
 
   @override
@@ -42,6 +53,8 @@ class _EmptyStateState extends State<EmptyState>
 
   @override
   Widget build(BuildContext context) {
+    final accent =
+        widget.accentColor ?? Theme.of(context).colorScheme.primary;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
@@ -51,18 +64,19 @@ class _EmptyStateState extends State<EmptyState>
             ScaleTransition(
               scale: _scale,
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.08),
+                  color: accent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.28),
+                    width: 1.5,
+                  ),
                 ),
                 child: Icon(
                   widget.icon,
                   size: 44,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: accent,
                 ),
               ),
             ),
@@ -93,31 +107,24 @@ class _EmptyStateState extends State<EmptyState>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.06),
+                  color: accent.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.15),
+                    color: accent.withValues(alpha: 0.18),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.lightbulb_outline_rounded,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary),
+                        size: 16, color: accent),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         widget.hint!,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: accent,
                         ),
                       ),
                     ),

@@ -303,10 +303,12 @@ class _KsefPanelScreenState extends ConsumerState<KsefPanelScreen> {
                 error: (e, _) => Text('Błąd: $e'),
                 data: (list) => list.isEmpty
                     ? const EmptyState(
-                        icon: Icons.description_outlined,
-                        title: 'Brak faktur KSeF',
+                        icon: Icons.cloud_download_outlined,
+                        title: 'Czas pobrać pierwsze faktury',
                         subtitle:
-                            'Wybierz zakres dat i kliknij "Pobierz faktury z KSeF"',
+                            'Wybierz zakres dat powyżej i kliknij "Pobierz faktury z KSeF" — pojawią się tutaj w sekundę.',
+                        hint:
+                            'Standardowo synchronizujemy ostatnie 30 dni',
                       )
                     : KsefInvoiceTable(
                         invoices: list,

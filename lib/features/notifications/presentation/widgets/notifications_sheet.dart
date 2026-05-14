@@ -123,10 +123,11 @@ class _Body extends ConsumerWidget {
     }
     if (notifs.isEmpty && invites.isEmpty) {
       return const EmptyState(
-        icon: Icons.notifications_rounded,
-        title: 'Brak nowych powiadomień',
+        icon: Icons.notifications_off_outlined,
+        title: 'Cisza w ParagonPro',
         subtitle:
-            'Tu pojawią się przypomnienia o gwarancjach, osiągnięcia i wiadomości od rodziny.',
+            'Wszystko pod kontrolą — przypomnienia o gwarancjach, osiągnięcia i zaproszenia rodzinne wyświetlą się tutaj.',
+        accentColor: AppColors.accentAqua,
       );
     }
 

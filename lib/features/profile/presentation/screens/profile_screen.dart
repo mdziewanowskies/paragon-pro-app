@@ -1,110 +1,31 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/profile_service.dart';
-import '../../../../core/services/purchase_service.dart';
 import '../../../../core/services/subscription_service.dart';
-import '../../../../core/utils/validators.dart';
+import '../../../../shared/widgets/hero_header.dart';
 import '../../../../shared/widgets/loading_spinner.dart';
-import '../../../ksef/presentation/widgets/ksef_settings.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
+/// V3 profile hub. Audyt: "Rozbij profil na 3 podstrony: 'Moja
+/// subskrypcja', 'KSeF / integracje', 'Dane osobowe'. Wjazd przez
+/// ListItem cards z chevronem".
+///
+/// Stara wersja była 554-liniową planszą trzech niezwiązanych tematów
+/// (rozliczenia + integracje + dane osobowe). Księgowa szukała NIP-u,
+/// a dostawała token API KSeF — mieszane priorytety.
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _streetController = TextEditingController();
-  final _houseNumberController = TextEditingController();
-  final _apartmentNumberController = TextEditingController();
-  final _postalCodeController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _bankAccountController = TextEditingController();
-  bool _isLoading = false;
-  bool _initialized = false;
-  bool _obscureIban = true;
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _streetController.dispose();
-    _houseNumberController.dispose();
-    _apartmentNumberController.dispose();
-    _postalCodeController.dispose();
-    _cityController.dispose();
-    _bankAccountController.dispose();
-    super.dispose();
-  }
-
-  void _populateFields() {
-    final profile = ref.read(profileProvider).value;
-    if (profile != null && !_initialized) {
-      _usernameController.text = profile.username ?? '';
-      _firstNameController.text = profile.firstName ?? '';
-      _lastNameController.text = profile.lastName ?? '';
-      _streetController.text = profile.street ?? '';
-      _houseNumberController.text = profile.houseNumber ?? '';
-      _apartmentNumberController.text = profile.apartmentNumber ?? '';
-      _postalCodeController.text = profile.postalCode ?? '';
-      _cityController.text = profile.city ?? '';
-      _bankAccountController.text = profile.bankAccountNumber ?? '';
-      _initialized = true;
-    }
-  }
-
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-    try {
-      await ref.read(profileProvider.notifier).updateProfile({
-        'username': _usernameController.text.trim(),
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'street': _streetController.text.trim(),
-        'house_number': _houseNumberController.text.trim(),
-        'apartment_number': _apartmentNumberController.text.trim(),
-        'postal_code': _postalCodeController.text.trim(),
-        'city': _cityController.text.trim(),
-        'bank_account_number': _bankAccountController.text.trim(),
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil zaktualizowany!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Błąd: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final profileState = ref.watch(profileProvider);
-    final subscription = ref.watch(revenueCatStatusProvider);
-    final supabaseSub = ref.watch(subscriptionProvider);
-    final supabaseTier = supabaseSub.valueOrNull;
-    final hasPremiumInSupabase = supabaseTier?.isPremium ?? false;
+    final supabaseTier = ref.watch(subscriptionProvider).valueOrNull;
+    final isPremium = supabaseTier?.isPremium ?? false;
     final isFamilyLite = supabaseTier?.isFamilyLite ?? false;
-    final isInheritedFromFamily =
-        supabaseTier?.isInheritedFromFamily ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -118,324 +39,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         loading: () => const LoadingSpinner(),
         error: (e, _) => Center(child: Text('Błąd: $e')),
         data: (profile) {
-          _populateFields();
-
-          return Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                // ── Section: Subskrypcja ──
-                _SectionHeader('Subskrypcja'),
-                Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: subscription.when(
-                      loading: () => const LoadingSpinner(),
-                      error: (_, __) =>
-                          const Text('Błąd ładowania subskrypcji'),
-                      data: (sub) {
-                        final isPremium =
-                            sub.isPremium || hasPremiumInSupabase;
-                        // Tier display priority:
-                        // RC Premium → 'Premium', Supabase family_lite →
-                        // 'Family Lite', otherwise the RC label.
-                        final tierLabel = isPremium
-                            ? 'Premium'
-                            : isFamilyLite
-                                ? 'Family Lite'
-                                : sub.tierLabel;
-                        final showAccentIcon = isPremium || isFamilyLite;
-                        return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                isPremium
-                                    ? Icons.workspace_premium_rounded
-                                    : isFamilyLite
-                                        ? Icons.family_restroom_rounded
-                                        : Icons.card_membership_rounded,
-                                size: 20,
-                                color: showAccentIcon
-                                    ? Colors.amber
-                                    : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Plan $tierLabel',
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700),
-                              ),
-                              if (sub.isTrial) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber
-                                        .withValues(alpha: 0.15),
-                                    borderRadius:
-                                        BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'Trial',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.amber,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (sub.expirationDate != null &&
-                              !sub.isLifetime) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              sub.willRenew
-                                  ? 'Odnawia się: ${sub.expirationDate!.day}.${sub.expirationDate!.month}.${sub.expirationDate!.year}'
-                                  : 'Wygasa: ${sub.expirationDate!.day}.${sub.expirationDate!.month}.${sub.expirationDate!.year}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                          if (sub.isLifetime) ...[
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Subskrypcja dożywotnia',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.green),
-                            ),
-                          ],
-                          if (isFamilyLite && !isPremium) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.info_outline_rounded,
-                                    size: 14, color: Colors.amber),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    isInheritedFromFamily
-                                        ? 'Family Lite z planu rodziny — masz 15 paragonów/mies, wspólne wydatki i gamifikację rodzinną.'
-                                        : 'Family Lite — 15 paragonów/mies, wspólne wydatki, gamifikacja rodzinna.',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.7),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          if (!isPremium)
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    context.go('/pricing'),
-                                child: Text(
-                                  isFamilyLite
-                                      ? 'Odblokuj pełne Premium'
-                                      : 'Ulepsz do Pro',
-                                ),
-                              ),
-                            )
-                          else
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: () => RevenueCatService
-                                    .showCustomerCenter(),
-                                child: const Text(
-                                    'Zarządzaj subskrypcją'),
-                              ),
-                            ),
-                        ],
-                      );
-                      },
-                    ),
-                  ),
-                ),
-
-                // ── Section: Integracja KSeF ──
-                _SectionHeader('Integracja KSeF'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: KsefSettings(),
-                ),
-
-                // ── Section: Dane osobowe ──
-                _SectionHeader('Dane osobowe'),
-                _GroupedField(
-                    controller: _usernameController,
-                    label: 'Nazwa użytkownika',
-                    validator: Validators.username),
-                _GroupedRow(children: [
-                  _GroupedField(
-                      controller: _firstNameController,
-                      label: 'Imię',
-                      validator: (v) => Validators.required(v, 'Imię')),
-                  _GroupedField(
-                      controller: _lastNameController,
-                      label: 'Nazwisko',
-                      validator: (v) => Validators.required(v, 'Nazwisko')),
-                ]),
-
-                // ── Section: Adres ──
-                _SectionHeader('Adres'),
-                _GroupedField(
-                    controller: _streetController, label: 'Ulica'),
-                _GroupedRow(children: [
-                  _GroupedField(
-                      controller: _houseNumberController,
-                      label: 'Nr domu'),
-                  _GroupedField(
-                      controller: _apartmentNumberController,
-                      label: 'Nr mieszkania'),
-                ]),
-                _GroupedRow(children: [
-                  _GroupedField(
-                      controller: _postalCodeController,
-                      label: 'Kod pocztowy',
-                      validator: (v) =>
-                          v != null && v.isNotEmpty
-                              ? Validators.postalCode(v)
-                              : null),
-                  _GroupedField(
-                      controller: _cityController, label: 'Miasto'),
-                ]),
-
-                // ── Section: Finanse ──
-                _SectionHeader('Finanse'),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: TextFormField(
-                    controller: _bankAccountController,
-                    obscureText: _obscureIban,
-                    decoration: InputDecoration(
-                      labelText: 'Numer konta bankowego',
-                      hintText: 'PL00 0000 0000 0000 0000 0000 0000',
-                      suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(_obscureIban
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                                size: 20),
-                            onPressed: () => setState(
-                                () => _obscureIban = !_obscureIban),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.copy_rounded, size: 18),
-                            onPressed: () {
-                              if (_bankAccountController.text.isNotEmpty) {
-                                Clipboard.setData(ClipboardData(
-                                    text: _bankAccountController.text));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content:
-                                            Text('Numer konta skopiowany')));
-                              }
-                            },
-                          ),
-                        ],
+          final name = [profile?.firstName, profile?.lastName]
+              .where((p) => p != null && p.trim().isNotEmpty)
+              .join(' ')
+              .trim();
+          final displayName = name.isEmpty
+              ? (profile?.username ?? 'Twój profil')
+              : name;
+          final username = profile?.username;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _ProfileHero(
+                name: displayName,
+                username: username,
+                tierLabel: isPremium
+                    ? 'Premium'
+                    : isFamilyLite
+                        ? 'Family Lite'
+                        : 'Free',
+                isPremium: isPremium,
+                isFamilyLite: isFamilyLite,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              _NavCard(
+                icon: Icons.workspace_premium_rounded,
+                iconColor: AppColors.accentGold,
+                title: 'Moja subskrypcja',
+                subtitle: isPremium
+                    ? 'Plan Premium — pełen dostęp'
+                    : isFamilyLite
+                        ? 'Family Lite z planu rodziny'
+                        : 'Plan Free — kup Premium dla pełnych funkcji',
+                onTap: () => context.go('/profile/subscription'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _NavCard(
+                icon: Icons.description_rounded,
+                iconColor: AppColors.accentAqua,
+                title: 'Integracje KSeF',
+                subtitle: profile?.ksefToken != null &&
+                        profile!.ksefToken!.isNotEmpty
+                    ? 'Skonfigurowane'
+                    : 'Nie skonfigurowane',
+                onTap: () => context.go('/profile/ksef'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _NavCard(
+                icon: Icons.person_rounded,
+                iconColor: AppColors.primary400,
+                title: 'Dane osobowe',
+                subtitle: name.isEmpty
+                    ? 'Uzupełnij imię i nazwisko'
+                    : 'Imię, adres, numer konta',
+                onTap: () => context.go('/profile/personal'),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              _NavCard(
+                icon: Icons.monetization_on_rounded,
+                iconColor: AppColors.primary500,
+                title: 'Plany cenowe',
+                subtitle: 'Porównaj Premium z Family',
+                onTap: () => context.go('/pricing'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _NavCard(
+                icon: Icons.settings_rounded,
+                iconColor: AppColors.textSecondary,
+                title: 'Ustawienia aplikacji',
+                subtitle: 'Język, motyw, powiadomienia',
+                onTap: () => context.go('/settings'),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _LogoutTile(
+                onLogout: () async {
+                  final confirm = await showCupertinoModalPopup<bool>(
+                    context: context,
+                    builder: (ctx) => CupertinoActionSheet(
+                      title: const Text('Wylogowanie'),
+                      message: const Text(
+                          'Czy na pewno chcesz się wylogować?'),
+                      actions: [
+                        CupertinoActionSheetAction(
+                          isDestructiveAction: true,
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Wyloguj'),
+                        ),
+                      ],
+                      cancelButton: CupertinoActionSheetAction(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Anuluj'),
                       ),
                     ),
-                  ),
-                ),
-
-                // ── Save button ──
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveProfile,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 16,
-                              width: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2),
-                            )
-                          : const Text('Zapisz zmiany'),
-                    ),
-                  ),
-                ),
-
-                // ── Quick links ──
-                _SectionHeader(''),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      _QuickLink(
-                        icon: Icons.monetization_on_rounded,
-                        label: 'Plany cenowe',
-                        onTap: () => context.go('/pricing'),
-                      ),
-                      _QuickLink(
-                        icon: Icons.settings_rounded,
-                        label: 'Ustawienia',
-                        onTap: () => context.go('/settings'),
-                      ),
-                      _QuickLink(
-                        icon: Icons.logout_rounded,
-                        label: 'Wyloguj się',
-                        color: Colors.red,
-                        onTap: () async {
-                          final confirm = await showCupertinoModalPopup<bool>(
-                            context: context,
-                            builder: (ctx) => CupertinoActionSheet(
-                              title: const Text('Wylogowanie'),
-                              message: const Text(
-                                  'Czy na pewno chcesz się wylogować?'),
-                              actions: [
-                                CupertinoActionSheetAction(
-                                  isDestructiveAction: true,
-                                  onPressed: () =>
-                                      Navigator.pop(ctx, true),
-                                  child: const Text('Wyloguj'),
-                                ),
-                              ],
-                              cancelButton: CupertinoActionSheetAction(
-                                onPressed: () =>
-                                    Navigator.pop(ctx, false),
-                                child: const Text('Anuluj'),
-                              ),
-                            ),
-                          );
-                          if (confirm == true && context.mounted) {
-                            await ref.read(authServiceProvider).signOut();
-                            if (context.mounted) context.go('/login');
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+                  );
+                  if (confirm == true && context.mounted) {
+                    await ref.read(authServiceProvider).signOut();
+                    if (context.mounted) context.go('/login');
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
           );
         },
       ),
@@ -443,111 +147,210 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-// ─── Helpers ────────────────────────────────────────────────
+/// Mały hero z avatarem (litera imienia) + nazwa + tier pill. Audyt
+/// rekomenduje hero-celebrację posiadania subskrypcji w profilu.
+class _ProfileHero extends StatelessWidget {
+  final String name;
+  final String? username;
+  final String tierLabel;
+  final bool isPremium;
+  final bool isFamilyLite;
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader(this.title);
+  const _ProfileHero({
+    required this.name,
+    required this.username,
+    required this.tierLabel,
+    required this.isPremium,
+    required this.isFamilyLite,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (title.isEmpty) return const SizedBox(height: 8);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: Theme.of(context)
-              .colorScheme
-              .onSurface
-              .withValues(alpha: 0.5),
+    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    final gradient = isPremium
+        ? const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.accentGold, AppColors.accentGoldDeep],
+          )
+        : AppColors.heroGradientV3;
+
+    return HeroHeader(
+      gradient: gradient,
+      minHeight: 160,
+      overline: username != null && username!.isNotEmpty
+          ? '@$username'
+          : 'Twój profil',
+      title: name,
+      caption: isPremium
+          ? 'Plan Premium · pełen dostęp'
+          : isFamilyLite
+              ? 'Family Lite · z planu rodziny'
+              : 'Plan Free',
+      pills: [
+        HeroPill(
+          icon: isPremium
+              ? Icons.workspace_premium_rounded
+              : Icons.card_membership_rounded,
+          label: tierLabel,
+          background: isPremium
+              ? AppColors.primary900.withValues(alpha: 0.32)
+              : Colors.white.withValues(alpha: 0.18),
+        ),
+      ],
+      fab: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.2),
+          border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
         ),
       ),
     );
   }
 }
 
-class _GroupedField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String? Function(String?)? validator;
-
-  const _GroupedField({
-    required this.controller,
-    required this.label,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(labelText: label),
-        validator: validator,
-      ),
-    );
-  }
-}
-
-class _GroupedRow extends StatelessWidget {
-  final List<_GroupedField> children;
-  const _GroupedRow({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: children.asMap().entries.map((entry) {
-          final i = entry.key;
-          final child = entry.value;
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: i > 0 ? 8 : 0),
-              child: TextFormField(
-                controller: child.controller,
-                decoration: InputDecoration(labelText: child.label),
-                validator: child.validator,
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _QuickLink extends StatelessWidget {
+/// ListTile-style nav card. Audyt: "Wjazd przez ListItem cards z
+/// chevronem".
+class _NavCard extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final Color? color;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
-  const _QuickLink({
+  const _NavCard({
     required this.icon,
-    required this.label,
-    this.color,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(label,
-            style: TextStyle(
-                color: color, fontWeight: FontWeight.w500, fontSize: 15)),
-        trailing:
-            Icon(Icons.chevron_right_rounded, color: color ?? Colors.grey, size: 20),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
         onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            boxShadow: AppShadows.md,
+          ),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: iconColor.withValues(alpha: 0.16),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 20, color: iconColor),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 22,
+                color: AppColors.textTertiary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoutTile extends StatelessWidget {
+  final VoidCallback onLogout;
+  const _LogoutTile({required this.onLogout});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onLogout,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppColors.danger500.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+                color: AppColors.danger500.withValues(alpha: 0.24)),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.logout_rounded,
+                  size: 18, color: AppColors.danger500),
+              SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  'Wyloguj się',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.danger500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

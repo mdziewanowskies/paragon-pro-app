@@ -687,17 +687,20 @@ class _ReceiptListScreenState extends ConsumerState<ReceiptListScreen> {
             SliverFillRemaining(
               child: EmptyState(
                 icon: _filterType == ReceiptFilterType.ksefOnly
-                    ? Icons.description_outlined
-                    : Icons.receipt_long_rounded,
+                    ? Icons.cloud_download_outlined
+                    : Icons.camera_alt_outlined,
                 title: _filterType == ReceiptFilterType.ksefOnly
                     ? 'Brak faktur KSeF'
-                    : 'Brak paragonów',
+                    : 'Tu pojawią się Twoje paragony',
                 subtitle: _filterType == ReceiptFilterType.ksefOnly
-                    ? 'Zsynchronizuj faktury w zakładce KSeF'
-                    : 'Zrób zdjęcie pierwszego paragonu, aby rozpocząć!',
+                    ? 'Zsynchronizuj faktury w zakładce KSeF — pobierzemy je z systemu MF.'
+                    : 'Zrób zdjęcie paragonu albo wybierz z galerii. AI rozpozna sklep, kwotę i kategorię.',
                 hint: _filterType == ReceiptFilterType.ksefOnly
-                    ? 'Przejdź do zakładki KSeF i kliknij "Pobierz faktury"'
-                    : 'Wróć na Home i kliknij "Zrób zdjęcie"',
+                    ? 'Zakładka KSeF → "Pobierz faktury z KSeF"'
+                    : 'Strona główna → "Skanuj"',
+                accentColor: _filterType == ReceiptFilterType.ksefOnly
+                    ? AppColors.accentAqua
+                    : AppColors.primary400,
               ),
             )
           else

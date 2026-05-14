@@ -11,6 +11,9 @@ import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/profile/presentation/screens/profile_setup_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/subscription_screen.dart';
+import '../../features/profile/presentation/screens/ksef_settings_screen.dart';
+import '../../features/profile/presentation/screens/personal_data_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/subscription/presentation/screens/paywall_screen.dart';
 import '../../features/receipts/presentation/screens/receipt_grid_screen.dart';
@@ -97,6 +100,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         pageBuilder: (context, state) =>
             smoothPage(child: const ProfileScreen()),
+      ),
+      GoRoute(
+        path: '/profile/subscription',
+        pageBuilder: (context, state) =>
+            smoothPage(child: const SubscriptionScreen()),
+      ),
+      GoRoute(
+        path: '/profile/ksef',
+        pageBuilder: (context, state) =>
+            smoothPage(child: const KsefSettingsScreen()),
+      ),
+      GoRoute(
+        path: '/profile/personal',
+        pageBuilder: (context, state) =>
+            smoothPage(child: const PersonalDataScreen()),
       ),
       GoRoute(
         path: '/settings',

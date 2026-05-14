@@ -148,6 +148,11 @@ class _WarrantyListScreenState extends ConsumerState<WarrantyListScreen> {
                     icon: _emptyIcon(),
                     title: _emptyTitle(),
                     subtitle: _emptySubtitle(),
+                    accentColor: _tab == _WarrantyTab.expiring
+                        ? AppColors.warning500
+                        : _tab == _WarrantyTab.archive
+                            ? AppColors.textTertiary
+                            : AppColors.primary400,
                   ),
                 )
               else
