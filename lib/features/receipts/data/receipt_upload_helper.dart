@@ -16,6 +16,7 @@ import '../../../core/utils/merchant_normalizer.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../onboarding/coachmark/coachmark_controller.dart';
 import '../../onboarding/first_receipt/first_receipt_celebration.dart';
+import '../presentation/screens/receipt_list_screen.dart' show receiptListRefreshProvider;
 import 'receipt_repository.dart';
 
 /// V3 — wspólna ścieżka picker → upload → AI → save → snackbar/fanfara
