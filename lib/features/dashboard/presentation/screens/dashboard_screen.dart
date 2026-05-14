@@ -196,7 +196,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     };
     // Auto-start dla nowych userów po 600 ms — daje czas hero/stats
     // wyrenderować się przed pokazaniem spotlight'u. Czekamy aż
-    // FirstLoginSplash (jeśli aktywny) skończy swoją 3s animację,
+    // FirstLoginSplash (jeśli aktywny) skończy swoją 6s animację,
     // żeby tutorial nie startował "pod" overlayem konfiguracji.
     void tryStart() {
       if (!mounted) return;

@@ -9,7 +9,7 @@ import '../../../shared/widgets/app_logo.dart';
 /// V3 Sprint 2 — ekran "Konfigurowanie Twojej aplikacji..." pokazywany
 /// raz, po pierwszym zalogowaniu nowego użytkownika.
 ///
-/// 3-sekundowa animacja z gradient brand background'em, logo,
+/// 6-sekundowa animacja z gradient brand background'em, logo,
 /// circular progress oraz cyklicznym tekstem statusu ("Wczytujemy
 /// Twój profil...", "Konfigurujemy KSeF...", "Już prawie...").
 /// Po zakończeniu zapisuje flagę `first_login_configured_v1` i woła
@@ -51,18 +51,18 @@ class _FirstLoginSplashState extends State<FirstLoginSplash>
     )..forward();
     _progress = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 6000),
     )..forward();
 
-    // Rotujący komunikat statusu — co 800 ms zmiana
+    // Rotujący komunikat statusu — co 1500 ms zmiana (4 wiadomości × 1.5s = 6s)
     for (int i = 1; i < _statusMessages.length; i++) {
-      Future.delayed(Duration(milliseconds: 800 * i), () {
+      Future.delayed(Duration(milliseconds: 1500 * i), () {
         if (mounted) setState(() => _statusIndex = i);
       });
     }
 
-    // Po 3 sekundach zapisujemy flagę i kończymy
-    Future.delayed(const Duration(milliseconds: 3100), () async {
+    // Po 6 sekundach zapisujemy flagę i kończymy
+    Future.delayed(const Duration(milliseconds: 6100), () async {
       if (!mounted) return;
       try {
         final prefs = await SharedPreferences.getInstance();
