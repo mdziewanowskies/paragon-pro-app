@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Brand gradient backdrop -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#052E1F"/>
+      <stop offset="50%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <!-- Aqua → primary gradient na akcent -->
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="logoWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E6FFF5"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="22%" cy="50%" r="40%">
+      <stop offset="0%" stop-color="#34D399" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#34D399" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <!-- Glow pod logo po lewej -->
+  <circle cx="225" cy="250" r="220" fill="url(#glow)"/>
+
+  <!-- Logo po lewej. Original 240x280 → scale 1.0 → 240w x 280h.
+       Center vertically: y = (500-280)/2 = 110. x = 100. -->
+  <g transform="translate(100 110)">
+    <path fill="url(#logoWhite)" fill-rule="evenodd" d="
+      M 22 22
+      L 164 22
+      C 204 22, 224 48, 224 82
+      C 224 116, 204 142, 164 142
+      L 150 142
+      L 150 250
+      L 134 238
+      L 118 252
+      L 102 238
+      L 86 252
+      L 70 238
+      L 54 252
+      L 38 238
+      L 22 252
+      Z
+      M 50 52
+      L 122 52
+      L 122 206
+      L 110 196
+      L 96 208
+      L 82 196
+      L 68 208
+      L 56 196
+      L 50 202
+      Z
+      M 150 52
+      L 150 112
+      L 164 112
+      C 186 112, 200 100, 200 82
+      C 200 64, 186 52, 164 52
+      Z
+    "/>
+    <rect x="62" y="82" width="52" height="7" rx="3.5" fill="#10B981"/>
+    <rect x="62" y="100" width="52" height="7" rx="3.5" fill="#10B981"/>
+    <rect x="62" y="118" width="36" height="7" rx="3.5" fill="#10B981"/>
+  </g>
+
+  <!-- Tekst po prawej -->
+  <!-- ParagonPro w dwóch kolorach: Paragon biały + Pro aqua -->
+  <text x="400" y="220" font-family="-apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="84" font-weight="900" letter-spacing="-2" fill="#FFFFFF">Paragon<tspan fill="#34D399">Pro</tspan></text>
+
+  <!-- Tagline -->
+  <text x="400" y="275" font-family="-apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="26" font-weight="500" fill="#E6FFF5" opacity="0.92">Twój asystent paragonów, gwarancji i VAT</text>
+
+  <!-- Trzy chipsy z funkcjami -->
+  <g transform="translate(400 320)">
+    <!-- chip 1 -->
+    <rect x="0" y="0" width="186" height="48" rx="24" fill="#FFFFFF" fill-opacity="0.12" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1"/>
+    <circle cx="26" cy="24" r="8" fill="#34D399"/>
+    <text x="46" y="31" font-family="-apple-system, system-ui, Helvetica, Arial, sans-serif"
+          font-size="17" font-weight="700" fill="#FFFFFF">Skan AI</text>
+
+    <!-- chip 2 -->
+    <rect x="200" y="0" width="186" height="48" rx="24" fill="#FFFFFF" fill-opacity="0.12" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1"/>
+    <circle cx="226" cy="24" r="8" fill="#06B6D4"/>
+    <text x="246" y="31" font-family="-apple-system, system-ui, Helvetica, Arial, sans-serif"
+          font-size="17" font-weight="700" fill="#FFFFFF">KSeF VAT</text>
+
+    <!-- chip 3 -->
+    <rect x="0" y="64" width="186" height="48" rx="24" fill="#FFFFFF" fill-opacity="0.12" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1"/>
+    <circle cx="26" cy="88" r="8" fill="#FFC107"/>
+    <text x="46" y="95" font-family="-apple-system, system-ui, Helvetica, Arial, sans-serif"
+          font-size="17" font-weight="700" fill="#FFFFFF">Gwarancje</text>
+
+    <!-- chip 4 -->
+    <rect x="200" y="64" width="186" height="48" rx="24" fill="#FFFFFF" fill-opacity="0.12" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1"/>
+    <circle cx="226" cy="88" r="8" fill="#E91E63"/>
+    <text x="246" y="95" font-family="-apple-system, system-ui, Helvetica, Arial, sans-serif"
+          font-size="17" font-weight="700" fill="#FFFFFF">Analityka</text>
+  </g>
+</svg>
