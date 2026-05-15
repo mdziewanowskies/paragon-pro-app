@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
@@ -106,8 +107,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  void _showInProgressDoc(String name) {
+  Future<void> _showInProgressDoc(String name) async {
     Haptics.tap();
+    // Regulamin jest już opublikowany — otwórz w przeglądarce zamiast
+    // pokazywać dialog 'w opracowaniu'. Polityka prywatności jeszcze
+    // dochodzi, więc dla niej zostaje fallback dialog.
+    if (name == 'Regulamin') {
+      final uri = Uri.parse('https://paragonpro.pl/regulamin');
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    }
+    if (!mounted) return;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

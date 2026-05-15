@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
@@ -113,11 +114,18 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.description_outlined,
               iconColor: c.textSecondary,
               label: 'Regulamin',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Regulamin w przygotowaniu')),
-                );
+              onTap: () async {
+                final uri = Uri.parse('https://paragonpro.pl/regulamin');
+                if (!await launchUrl(uri,
+                    mode: LaunchMode.externalApplication)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              'Nie udało się otworzyć regulaminu')),
+                    );
+                  }
+                }
               },
             ),
             _SettingTile(
