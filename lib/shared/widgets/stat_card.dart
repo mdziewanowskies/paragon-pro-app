@@ -74,10 +74,16 @@ class StatCard extends StatelessWidget {
             AppSpacing.lg,
             AppSpacing.md,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          // FittedBox skaluje zawartość w dół jeśli zaczyna wystawać
+          // (różnice fontów + akcessibility text scaler dawały
+          // sub-pixel overflow ~0.9 px na niektórych device'ach).
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.topLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // Ikona w okręgu top-left (subtle, ~18 px ikona w 30 px circle)
               Container(
                 width: 30,
@@ -127,6 +133,7 @@ class StatCard extends StatelessWidget {
                 ),
               ],
             ],
+            ),
           ),
         ),
       ),
