@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/haptics.dart';
 import '../../../gamification/data/best_achievement_provider.dart';
@@ -357,6 +358,7 @@ class _HomeTab extends ConsumerWidget {
     final profile = ref.watch(profileProvider);
     final stats = ref.watch(dashboardStatsProvider);
     final gamification = ref.watch(gamificationDataProvider);
+    final c = context.colors;
 
     return CustomScrollView(
       slivers: [
@@ -364,7 +366,7 @@ class _HomeTab extends ConsumerWidget {
         SliverAppBar(
           floating: true,
           snap: true,
-          backgroundColor: AppColors.darkBackground,
+          backgroundColor: c.surface0,
           title: const AppLogoWithText(logoSize: 32, fontSize: 18),
           actions: [
             const CoachmarkTarget(

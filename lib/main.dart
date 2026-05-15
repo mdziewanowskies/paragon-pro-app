@@ -21,11 +21,12 @@ void main() async {
   // Initialize date formatting for Polish locale
   await initializeDateFormatting('pl_PL', null);
 
-  // System UI overlay style
+  // System UI overlay style — transparent status bar; ikona/tekst
+  // statusbara dobierane automatycznie przez M3 AppBar w zależności
+  // od jasności jego background'u (light bg → ciemne ikony).
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
     ),
   );
 

@@ -94,7 +94,7 @@ class StatCard extends StatelessWidget {
                 ),
                 child: Icon(icon, size: 16, color: palette.iconColor),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 value,
                 maxLines: 1,
