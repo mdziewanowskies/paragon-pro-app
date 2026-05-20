@@ -4,15 +4,21 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
-/// Receives universal links + custom-scheme deep links and routes them
-/// into go_router. Handles both cold start (initial URI when the app
-/// is launched from a link) and warm start (URIs while running).
+/// Receives custom-scheme deep links and routes them into go_router.
+/// Handles both cold start (initial URI when the app is launched from
+/// a link) and warm start (URIs while running).
 ///
 /// Supported URLs (more can be added centrally in [_resolve]):
-/// - `https://paragonpro.app/receipt/{id}`        → /receipts (with hash)
-/// - `https://paragonpro.app/warranty/{id}`       → /warranties
-/// - `https://paragonpro.app/challenge/{id}`      → /
-/// - `paragonpro://invite?code=ABC123`            → /register?invite=ABC123
+/// - `paragonpro://invite?code=ABC123`     → /register?invite=ABC123
+/// - `paragonpro://receipt/{id}`           → /receipts
+/// - `paragonpro://warranty/{id}`          → /
+/// - `paragonpro://paywall`                → /pricing
+///
+/// HTTPS App Links (`https://paragonpro.app/...`) były rozważane ale
+/// usunięte z manifestu (wymagałyby hostingu assetlinks.json z SHA-256
+/// klucza Play App Signing). _resolve() nadal akceptuje te ścieżki —
+/// można je w przyszłości re-enable'ować dodając intent-filter z
+/// autoVerify="true" + plik na serwerze.
 class DeepLinkService {
   DeepLinkService._();
 

@@ -157,7 +157,7 @@ class Leaderboard extends StatelessWidget {
     await Share.share(
       'Dołącz do mnie w ParagonPro — śledź wydatki, zbieraj punkty i '
       'ścigaj się ze znajomymi w rankingu! '
-      'https://paragonpro.app/invite',
+      'https://paragonpro.pl',
       subject: 'ParagonPro — Twój inteligentny asystent finansowy',
     );
   }
