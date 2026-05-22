@@ -38,13 +38,22 @@ class SubscriptionScreen extends ConsumerWidget {
         error: (_, __) => const Center(
             child: Text('Błąd ładowania subskrypcji')),
         data: (sub) {
-          final isPremium = sub.isPremium || hasPremiumInSupabase;
+          // Supabase user_subscriptions.tier = single source of truth.
+          // Lokalny RevenueCat cache potrafi mieć aktywny entitlement
+          // z sandbox/test purchase lub anonymous appUser sprzed
+          // zalogowania — i wtedy nie należy do tego usera. Metadane
+          // z RC (expiry, willRenew, trial, lifetime) są używane TYLKO
+          // jeśli Supabase potwierdza premium.
+          final isPremium = hasPremiumInSupabase;
           final tierLabel = isPremium
               ? 'Premium'
               : isFamilyLite
                   ? 'Family Lite'
-                  : sub.tierLabel;
-          final expiry = sub.expirationDate;
+                  : 'Darmowy';
+          final expiry = isPremium ? sub.expirationDate : null;
+          final isTrial = isPremium && sub.isTrial;
+          final isLifetime = isPremium && sub.isLifetime;
+          final willRenew = isPremium && sub.willRenew;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -52,9 +61,9 @@ class SubscriptionScreen extends ConsumerWidget {
               _PlanHero(
                 isPremium: isPremium,
                 isFamilyLite: isFamilyLite,
-                isTrial: sub.isTrial,
-                isLifetime: sub.isLifetime,
-                willRenew: sub.willRenew,
+                isTrial: isTrial,
+                isLifetime: isLifetime,
+                willRenew: willRenew,
                 expirationDate: expiry,
                 tierLabel: tierLabel,
               ),
